@@ -1,0 +1,13 @@
+import os
+os.environ['LD_LIBRARY_PATH']="/home/rusty/src/dfm/1.6.3/lnx64/lib/"
+
+class LocalConfig(object):
+    dfm_bin_dir="/home/rusty/src/dfm/1.6.3/lnx64/bin/"
+    # not sure..
+    share_bin_dir="/usr/bin" 
+
+    mpi_bin_dir="/usr/bin"
+    mpi_bin_exe="mpiexec.mpich"
+
+    # other defaults for local machine
+    num_procs=4
