@@ -1,3 +1,5 @@
 run
 run_flow_test
 local_config.py
+run-drainfill
+run_tide_test
