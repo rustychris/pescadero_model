@@ -3,3 +3,5 @@ run_flow_test
 local_config.py
 run-drainfill
 run_tide_test
+run-drainfill-v*
+run_tide_test-v*

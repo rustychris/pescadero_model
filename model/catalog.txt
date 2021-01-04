@@ -1,0 +1,7 @@
+run-drainfill-v00
+  3 day fill-drain cycle. Doesn't drain as low as needed.
+run-drainfill-v01
+  4 day cycle. And zero out horizontal viscosity and diffusion.
+  It does continue to drain some, but still only gets
+  down to 0.67m, where it should be 0.55m or lower.
+

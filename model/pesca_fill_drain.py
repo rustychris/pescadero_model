@@ -10,7 +10,7 @@ class PescaFillDrain(pesca_base.PescaButanoBase):
     No river flows are included.
     """
     run_start=np.datetime64("2015-07-01")
-    run_stop =np.datetime64("2015-07-04")
+    run_stop =np.datetime64("2015-07-05")
     run_dir="run-drainfill"
 
     def set_bcs(self):
@@ -25,11 +25,3 @@ class PescaFillDrain(pesca_base.PescaButanoBase):
         self.add_bcs(hm.StageBC(name='ocean_bc',water_level=z_da))
         
     
-
-# TODO:
-#   Debug weird grid artifact
-#   Verify that structures are doing something.
-#     PCH, NMC and NM_ditch are all showing fs
-#     breaks. Structures are in there, but
-#     uncalibrated.
-

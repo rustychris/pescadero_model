@@ -6,7 +6,7 @@ from stompy.model.delft import dflow_model
 from stompy.grid import unstructured_grid
 
 # Cycle -1 -- 6 -- -1
-model=pesca_fill_drain.PescaFillDrain()
+model=pesca_fill_drain.PescaFillDrain(run_dir="run-drainfill-v03")
 
 model.write()
 model.partition()

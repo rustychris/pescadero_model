@@ -6,9 +6,9 @@ from stompy.spatial import field
 ##
 
 bathy_dir="../../../bathy"
-# in the future, this has asbuilt in the name
-bathy_asbuilt_fn=os.path.join(bathy_dir,'compiled-dem-20201211-1m.tif') 
-bathy_existing_fn=os.path.join(bathy_dir,'compiled-dem-existing-20201211-1m.tif')
+# The as-built needs to be generated
+bathy_asbuilt_fn=os.path.join(bathy_dir,'compiled-dem-asbuilt-20201230-1m.tif') 
+bathy_existing_fn=os.path.join(bathy_dir,'compiled-dem-existing-20201230-1m.tif')
 
 ##
 
@@ -21,6 +21,9 @@ g.renumber()
 for dem_fn, name in [ (bathy_asbuilt_fn,'asbuilt'),
                       (bathy_existing_fn,'existing') ]:
     print("Setting bathymetry for %s"%name)
+    if not os.path.exists(dem_fn):
+        print("----  DEM file %s doesn't exist ----"%dem_fn)
+        continue
     dem=field.GdalGrid(dem_fn)
 
     # Simplest option:

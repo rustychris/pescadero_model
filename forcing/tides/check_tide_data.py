@@ -99,4 +99,6 @@ ax.axis( (734454.5300028515, 734456.2446132009, 0.3449726830137707, 1.8448001794
 #  But when 2012-04-20 comes around, ESA is again lagged about an
 #   hour.
 
-
+# Does Megan's dissertation show good comparisons?
+# Figure 2.12, kind of. Just compares to SF.
+# 

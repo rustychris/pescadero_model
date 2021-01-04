@@ -29,6 +29,14 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
     def __init__(self,*a,**k):
         super(PescaButanoBase,self).__init__(*a,**k)
 
+        # No horizontal viscosity or diffusion
+        self.mdu['physics','Vicouv']=0.0
+        self.mdu['physics','Dicouv']=0.0
+
+        # Initial bedlevtype was 3: at nodes, face levels mean of node values
+        # Try 4: at nodes, face levels min. of node values
+        self.mdu['geometry','BedLevType']=4
+        
         self.set_grid_and_features()
         self.set_bcs()
         self.add_monitoring()
@@ -45,6 +53,7 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
         raise Exception("set_bcs() must be overridden in subclass")
 
     def add_monitoring(self):
+        print("Call to add_monitoring")
         self.add_monitor_points(self.match_gazetteer(geom_type='Point',type='monitor'))
         self.add_monitor_sections(self.match_gazetteer(geom_type='LineString',type='transect'))
 
@@ -101,7 +110,10 @@ class PescaButano(PescaButanoBase):
         # Both have NAVD88. ESA waterlevels suggest that (a)
         # observations often have a 1 hr error (late), and (b)
         # Pescadero timing probably pretty close to Monterey
-        # timing.
+        # timing. Comparing time of high tide at a subordinate
+        # stations (Ano Nuevo) and short-term harmonic station
+        # (Pillar Point) to SF and Monterey further confirms
+        # that Pescadero is probably very close to Monterey.
         
         # TODO: need to account for wave climate.
         self.add_bcs( hm.NOAAStageBC(name='ocean_bc',station=9413450,
