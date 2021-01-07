@@ -5,3 +5,6 @@ run-drainfill
 run_tide_test
 run-drainfill-v*
 run_tide_test-v*
+.ipynb_checkpoints
+run_filldrain-v*
+run_flow_test-*

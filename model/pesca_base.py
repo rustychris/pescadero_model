@@ -37,6 +37,10 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
         # Try 4: at nodes, face levels min. of node values
         self.mdu['geometry','BedLevType']=4
         
+        self.mdu['output','StatsInterval']=300 # stat output every 5 minutes?
+
+        self.mdu['physics','UnifFrictCoef']=0.023 # just standard value.
+        
         self.set_grid_and_features()
         self.set_bcs()
         self.add_monitoring()
@@ -61,7 +65,8 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
         self.add_pch_structure()
         self.add_nmc_structure()
         self.add_nm_ditch_structure()
-        # self.add_mouth_structure() # coming soon...
+        self.add_mouth_structure()
+        
     def add_pch_structure(self):
         self.add_Structure(
             type='gate',
@@ -94,7 +99,22 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
             CrestLevel=1.2, # roughly matches bathy.
             CrestWidth=0.3, # total guess
         )
-        
+
+    def add_mouth_structure(self):
+        # The mouth may require some testing...
+        # For now, will try using the opening width to set width
+        # rather than CrestWidth. CrestLevel sets lower edge,
+        self.add_Structure(
+            type='gate',
+            name='mouth',
+            # here the gate is never overtopped
+            GateHeight=10.0, # top of door to bottom of door
+            GateLowerEdgeLevel=0.2, # elevation of bottom of 'gate'
+            GateOpeningWidth=5.0, # width of opening. 
+            CrestLevel=0.2, # roughly matches bathy.
+            # CrestWidth=0.3, # should be the length of the edges
+        )
+
 class PescaButano(PescaButanoBase):
     def set_bcs(self):
         self.set_creek_bcs()

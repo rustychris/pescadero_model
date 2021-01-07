@@ -5,3 +5,42 @@ run-drainfill-v01
   It does continue to drain some, but still only gets
   down to 0.67m, where it should be 0.55m or lower.
 
+run_tide_test-v01
+  Tide timing, overall datum good.
+  Drains too fast.
+
+run_tide_test-v02
+  Try higher friction (still global), from 0.023 to 0.03.
+  High water basically unchanged.  Low water had same shape, but shifted
+  upwards.
+
+run_tide_test-v03
+  Revert friction, add mouth structure with gate opening width. Also
+  shorten time frame. Draining too slow. CrestWidth was 0.3, might have
+  been a problem.  Run again with no CrestWidth set.
+
+run_tide_test-v04
+  CrestWidth removed. GateOpeningWidth still 5m. Closer, but bottoms
+  out too high.
+
+run_tide_test-v05
+  Width to 10m, and drop crestLevel/gate lower edge to 0.2 (may not make a
+  a difference with the bathy). Basically looked like v01.
+
+run_tide_tide-v06
+  Bring the width back down to 5.0
+  
+run_filldrain-v04
+  No additional changes.  Running on cws linuxmodeling, and make naming
+  consistent
+  
+run_flow_test-v01
+  Likewise. N add'l changes, just naming and running on cws-linuxmodeling.
+
+run_flow_test-v02
+  No mouth structure in place.
+  
+
+
+
+
