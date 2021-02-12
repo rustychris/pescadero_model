@@ -25,6 +25,8 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
     run_dir="run"
 
     terrain='existing'
+    salinity=True
+    temperature=True
     
     def __init__(self,*a,**k):
         super(PescaButanoBase,self).__init__(*a,**k)
@@ -38,9 +40,27 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
         self.mdu['geometry','BedLevType']=4
         
         self.mdu['output','StatsInterval']=300 # stat output every 5 minutes?
+        self.mdu['output','MapInterval']=6*3600 # 6h.
+        self.mdu['output','RstInterval']=4*86400 # 4days
 
         self.mdu['physics','UnifFrictCoef']=0.023 # just standard value.
-        
+
+        if self.salinity:
+            self.mdu['physics','Salinity']=1
+            self.mdu['physics','InitialSalinity']=0.0
+        else:
+            self.mdu['physics','Salinity']=0
+        if self.temperature:
+            self.mdu['physics','Temperature']=1
+            self.mdu['physics','InitialTemperature']=18.0 # rough pull from plots
+        else:            
+            self.mdu['physics','Temperature']=0
+
+        if self.salinity or self.temperature:
+            self.mdu['physics','Idensform']=2 # UNESCO
+        else:
+            self.mdu['physics','Idensform']=0 # no density effects
+            
         self.set_grid_and_features()
         self.set_bcs()
         self.add_monitoring()
@@ -136,8 +156,18 @@ class PescaButano(PescaButanoBase):
         # that Pescadero is probably very close to Monterey.
         
         # TODO: need to account for wave climate.
-        self.add_bcs( hm.NOAAStageBC(name='ocean_bc',station=9413450,
-                                     cache_dir=cache_dir) )
+        ocean_bc=hm.NOAAStageBC(name='ocean_bc',station=9413450,
+                                     cache_dir=cache_dir)
+        self.add_bcs(ocean_bc)
+        if self.salinity:
+            # ballpark value pulled from BML time series
+            ocean_salt=hm.ScalarBC(parent=ocean_bc,scalar='salinity',value=33.0)
+            self.add_bcs([ocean_salt])
+        if self.temperature:
+            # ballpark value pulled from BML time series during open mouth,
+            # lower sensor at NCK.
+            ocean_temp=hm.ScalarBC(parent=ocean_bc,scalar='temperature',value=15.0)
+            self.add_bcs([ocean_temp])
 
     def set_creek_bcs(self):
         df=pd.read_csv(os.path.join(here,"../forcing/tu_flows/TU_flows_SI.csv"),
@@ -155,4 +185,12 @@ class PescaButano(PescaButanoBase):
         bc_pesca =hm.FlowBC(name='pescadero_ck',flow=da_pesca)
         
         self.add_bcs([bc_butano,bc_pesca])
+
+        # salinity: will default to 0.0 anyway.
+        
+        if self.temperature:
+            for ck in [bc_butano,bc_pesca]:
+                ck_temp=hm.ScalarBC(parent=ck,scalar='temperature',value=18)
+                self.add_bcs([ck_temp])
+                
         
