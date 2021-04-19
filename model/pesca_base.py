@@ -58,8 +58,14 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
 
         if self.salinity or self.temperature:
             self.mdu['physics','Idensform']=2 # UNESCO
+            # 10 sigma layers yielded nan at wetting front, and no tidal variability.
+            # 2D works fine -- seems to bring in the mouth geometry okay.
+            self.mdu['geometry','Kmx']=10 # number of layers
+            self.mdu['geometry','LayerType']=2 # all z layers
         else:
             self.mdu['physics','Idensform']=0 # no density effects
+
+        self.mdu['output','Wrimap_waterlevel_s0']=0 # no need for last step's water level
             
         self.set_grid_and_features()
         self.set_bcs()
@@ -136,6 +142,8 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
         )
 
 class PescaButano(PescaButanoBase):
+    """ Add realistic boundary conditions to base Pescadero model
+    """
     def set_bcs(self):
         self.set_creek_bcs()
         self.set_mouth_bc()
@@ -192,5 +200,46 @@ class PescaButano(PescaButanoBase):
             for ck in [bc_butano,bc_pesca]:
                 ck_temp=hm.ScalarBC(parent=ck,scalar='temperature',value=18)
                 self.add_bcs([ck_temp])
-                
+
+    # time shift for QCM, while we don't have QCM output for
+    # the period of the BML data
+    qcm_time_offset=np.timedelta64(0,'s')
+    def add_mouth_structure(self):
+        # Override mouth parameters and pull from QCM output.
+        # The mouth may require some testing...
+        # For now, will try using the opening width to set width
+        # rather than CrestWidth. CrestLevel sets lower edge,
+
+        qcm=pd.read_csv("../../data/ESA_QCM/ESA_draft_PescaderoQCM_output.csv",
+                        skiprows=[0],
+                        parse_dates=['Date (PST)'])
+        # del qcm['date (PST)']
+        # del qcm['WL (feet NAVD88)']
+        # del qcm['Unnamed: 7']
+        # del qcm['Unnamed: 8']
+        # del qcm['Unnamed: 9']
+        # del qcm['Unnamed: 10']
+        # del qcm['Unnamed: 11']
+
+        qcm['time']=qcm['Date (PST)'] + np.timedelta64(8,'h') + self.qcm_time_offset # Shift to UTC.
+        # These are both NAVD88, converted ft=>m
+        qcm['z_ocean']=0.3048 * qcm['Ocean level (feet NAVD88)']
+        qcm['z_thalweg']=0.3048 *qcm['Modeled Inlet thalweg elevation (feet NAVD88)']
+        # width
+        qcm['w_inlet']=0.3048* qcm['Modeled Inlet Width (feet)']
+
+        ds=xr.Dataset.from_dataframe(qcm[ ['time','z_ocean','z_thalweg','w_inlet']].set_index('time'))
         
+        crest=ds['z_thalweg']
+        width=ds['w_inlet']
+        
+        self.add_Structure(
+            type='gate',
+            name='mouth',
+            # here the gate is never overtopped
+            GateHeight=10.0, # top of door to bottom of door
+            GateLowerEdgeLevel=0.2, # elevation of bottom of 'gate'
+            GateOpeningWidth=width, # width of opening. 
+            CrestLevel=crest, # this will be the thalweg elevation 
+            # CrestWidth=0.3, # should be the length of the edges
+        )
