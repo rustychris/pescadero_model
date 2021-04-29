@@ -39,8 +39,22 @@ run_flow_test-v01
 
 run_flow_test-v02
   No mouth structure in place.
+
+run_salt_20160520-v00
+  Run with salinity BCs, but still 2D.
+
+run_tide_test-v07
+  Manually testing out variable structure
   
+run_salt_20160520-v01
+  Bring in ESA QCM for mouth geometry.  Rerunning this with fixed paths in structures.ini
+  
+run_salt_20160520-v02
+  Revert to 2D to diagnose nan values in v01.  Works ok in 2D.
+  
+run_salt_20160520-v03
+  Try 3D, now z layers.
 
-
-
-
+run_salt_20160520-v04
+  Debugging hole in delta marsh. Should be fixed, with extra call to edge_to_cells
+  

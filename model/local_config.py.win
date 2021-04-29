@@ -1,0 +1,18 @@
+import os
+
+# License path probably not necessary when not using the GUI
+os.environ['DHSDELFT_LICENSE_FILE']=r"E:\proj\SFEstuary\DelftFM;C:\Program Files (x86)\DS_Flex;"
+# Windows uses path for both executables and libraries (I think)
+os.environ['PATH']=(r"C:\Program Files (x86)\Delatres\Delft3D FM Suite 2019.02 HMWQ (1.5.2.42543)\plugins\DeltaShell.Dimr\kernels\x64\dflowfm\bin;"
+                    + r"C:\Program Files (x86)\Delatres\Delft3D FM Suite 2019.02 HMWQ (1.5.2.42543)\plugins\DeltaShell.Dimr\kernels\x64\share\bin;"
+                    + os.environ['PATH'])
+
+class LocalConfig(object):
+    dfm_bin_dir=r"C:\Program Files (x86)\Delatres\Delft3D FM Suite 2019.02 HMWQ (1.5.2.42543)\plugins\DeltaShell.Dimr\kernels\x64\dflowfm\bin"
+
+    # check on locations of MPIEXEC from set_delft_paths-1.5.2 
+    mpi_bin_dir=r"C:\Program Files (x86)\Delatres\Delft3D FM Suite 2019.02 HMWQ (1.5.2.42543)\plugins\DeltaShell.Dimr\kernels\x64\share\bin"
+    mpi_bin_exe="mpiexec.exe"
+
+    # other defaults for local machine
+    num_procs=16
