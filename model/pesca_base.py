@@ -210,17 +210,16 @@ class PescaButano(PescaButanoBase):
         # For now, will try using the opening width to set width
         # rather than CrestWidth. CrestLevel sets lower edge,
 
-        qcm=pd.read_csv("../../data/ESA_QCM/ESA_draft_PescaderoQCM_output.csv",
-                        skiprows=[0],
-                        parse_dates=['Date (PST)'])
-        # del qcm['date (PST)']
-        # del qcm['WL (feet NAVD88)']
-        # del qcm['Unnamed: 7']
-        # del qcm['Unnamed: 8']
-        # del qcm['Unnamed: 9']
-        # del qcm['Unnamed: 10']
-        # del qcm['Unnamed: 11']
-
+        qcm_pre2016=pd.read_csv("../../data/ESA_QCM/ESA_draft_PescaderoQCM_output.csv",
+                                skiprows=[0],usecols=range(7),
+                                parse_dates=['Date (PST)'])
+        qcm_2016_2017=pd.read_csv("../../data/ESA_QCM/ESA_draft_PescaderoQCM_output_4.28.2021.csv",
+                                  skiprows=[0],usecols=range(14),
+                                  parse_dates=['Date (PST)'])
+        # some extra rows in the csv
+        qcm_2016_2017=qcm_2016_2017[ ~qcm_2016_2017['Date (PST)'].isnull() ]
+        qcm=pd.concat([qcm_pre2016,qcm_2016_2017])
+        
         qcm['time']=qcm['Date (PST)'] + np.timedelta64(8,'h') + self.qcm_time_offset # Shift to UTC.
         # These are both NAVD88, converted ft=>m
         qcm['z_ocean']=0.3048 * qcm['Ocean level (feet NAVD88)']
