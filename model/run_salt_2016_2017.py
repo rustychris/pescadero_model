@@ -10,12 +10,11 @@ from stompy.grid import unstructured_grid
 ## 
 model=pesca_base.PescaButano(run_start=np.datetime64("2016-05-20 00:00"),
                              run_stop=np.datetime64("2016-06-20 00:00"),
-                             run_dir="run_salt_20160520-v04",
-                             qcm_time_offset=np.timedelta64(365,'D'),
+                             run_dir="run_salt_20160520-v05",
+                             qcm_time_offset=np.timedelta64(0,'D'),
                              salinity=True,
                              temperature=True)
 
-# model.mdu
 model.write()
 model.partition()
 model.run_simulation()

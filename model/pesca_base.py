@@ -163,9 +163,21 @@ class PescaButano(PescaButanoBase):
         # (Pillar Point) to SF and Monterey further confirms
         # that Pescadero is probably very close to Monterey.
         
-        # TODO: need to account for wave climate.
+        def Hsig_adjustment(da):
+            Hsig=cdip_mop.hindcast_dataset(station='SM141', # Pescadero State Beach
+                                           start_date=da.time.values[0],
+                                           end_date=da.time.values[-1],
+                                           clip='inclusive',
+                                           cache_dir=cache_dir,
+                                           variables=['waveHs'])
+            Hsig_colo=np.interp(utils.to_dnum(da.time.values),
+                                utils.to_dnum(Hsig.time.values), Hsig['waveHs'].values )
+            offset=(0.351*Hsig_colo - 0.230).clip(0)
+            return da+offset
+
         ocean_bc=hm.NOAAStageBC(name='ocean_bc',station=9413450,
-                                     cache_dir=cache_dir)
+                                filters=[hm.Transform(fn_da=Hsig_adjustment)],
+                                cache_dir=cache_dir)
         self.add_bcs(ocean_bc)
         if self.salinity:
             # ballpark value pulled from BML time series
@@ -222,8 +234,12 @@ class PescaButano(PescaButanoBase):
         
         qcm['time']=qcm['Date (PST)'] + np.timedelta64(8,'h') + self.qcm_time_offset # Shift to UTC.
         # These are both NAVD88, converted ft=>m
-        qcm['z_ocean']=0.3048 * qcm['Ocean level (feet NAVD88)']
-        qcm['z_thalweg']=0.3048 *qcm['Modeled Inlet thalweg elevation (feet NAVD88)']
+        # Prefer the modified data when available:
+        ocean_modified=qcm['Modified Ocean Level (feet NAVD88)']
+        # Otherwise the observed data.
+        ocean_level=qcm['Ocean level (feet NAVD88)']
+        qcm['z_ocean']=0.3048 * ocean_modified.combine_first(ocean_level)
+        qcm['z_thalweg']=0.3048 * qcm['Modeled Inlet thalweg elevation (feet NAVD88)']
         # width
         qcm['w_inlet']=0.3048* qcm['Modeled Inlet Width (feet)']
 
