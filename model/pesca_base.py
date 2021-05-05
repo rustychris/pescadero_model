@@ -8,6 +8,9 @@ import pandas as pd
 
 import stompy.model.delft.dflow_model as dfm
 import stompy.model.hydro_model as hm
+from stompy.io.local import cdip_mop
+from stompy import utils, filters
+
 import local_config
 
 here=os.path.dirname(__file__)
@@ -173,10 +176,14 @@ class PescaButano(PescaButanoBase):
             Hsig_colo=np.interp(utils.to_dnum(da.time.values),
                                 utils.to_dnum(Hsig.time.values), Hsig['waveHs'].values )
             offset=(0.351*Hsig_colo - 0.230).clip(0)
+            # TODO: see if a hanning window lowpass makes the "optimal" window size
+            # something shorter, which would seem more physical.
+            offset=filters.lowpass_fir(offset,winsize=7*24,window='boxcar')
             return da+offset
 
         ocean_bc=hm.NOAAStageBC(name='ocean_bc',station=9413450,
-                                filters=[hm.Transform(fn_da=Hsig_adjustment)],
+                                filters=[hm.Transform(fn_da=Hsig_adjustment),
+                                         hm.Lowpass(cutoff_hours=2.5)],
                                 cache_dir=cache_dir)
         self.add_bcs(ocean_bc)
         if self.salinity:
@@ -201,8 +208,13 @@ class PescaButano(PescaButanoBase):
         da_butano=extract_da('Impaired flow Butano TIDAL')
         da_pesca =extract_da('Impaired flow Pe TIDAL')
 
-        bc_butano=hm.FlowBC(name='butano_ck',flow=da_butano)
-        bc_pesca =hm.FlowBC(name='pescadero_ck',flow=da_pesca)
+        # Dredge shallower than usual to avoid stacking up z layers here.
+        # This should mean that other parts of the domain with bathy down to -0.25
+        # or so control the z-layer range, but this is still deep enough that initial
+        # water level will have this wet.
+        # "real" solution is maybe to have a spatially variable initial water level.
+        bc_butano=hm.FlowBC(name='butano_ck',flow=da_butano,dredge_depth=0.0)
+        bc_pesca =hm.FlowBC(name='pescadero_ck',flow=da_pesca,dredge_depth=0.0)
         
         self.add_bcs([bc_butano,bc_pesca])
 
