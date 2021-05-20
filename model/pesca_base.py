@@ -30,6 +30,9 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
     terrain='existing'
     salinity=True
     temperature=True
+    # if salinity or temperature are included, then use this
+    # many layers, otherwise just 1 layer
+    nlayers_3d=10
     
     def __init__(self,*a,**k):
         super(PescaButanoBase,self).__init__(*a,**k)
@@ -63,8 +66,19 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
             self.mdu['physics','Idensform']=2 # UNESCO
             # 10 sigma layers yielded nan at wetting front, and no tidal variability.
             # 2D works fine -- seems to bring in the mouth geometry okay.
-            self.mdu['geometry','Kmx']=10 # number of layers
+            self.mdu['geometry','Kmx']=self.nlayers_3d # number of layers
             self.mdu['geometry','LayerType']=2 # all z layers
+
+            # Based on this post:
+            # https://oss.deltares.nl/web/delft3dfm/general1/-/message_boards/message/1865851
+            # Can include this to specify details of z layer spacing.
+            if 0:
+                self.mdu['geometry','ZlayBot']=-0.6
+                self.mdu['geometry','ZlayTop']=2.0
+                self.mdu['geometry','StretchType']=1
+                frac=100./self.nlayers_3d
+                # something like 10 10 10 10 10 10 10 10 10 10
+                self.mdu['geometry','stretchCoef']=" ".join(["%.4f"%frac]*self.nlayers_3d)
         else:
             self.mdu['physics','Idensform']=0 # no density effects
 
@@ -78,9 +92,9 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
     def set_grid_and_features(self):
         # For now the only difference is the DEM. If they diverge, might go
         # with separate grid directories instead (maybe with some common features)
-        self.set_grid(f"../grids/pesca_butano_v00/pesca_butano_v00_{self.terrain}_bathy.nc")
-        self.add_gazetteer("../grids/pesca_butano_v00/line_features.shp")
-        self.add_gazetteer("../grids/pesca_butano_v00/point_features.shp")
+        self.set_grid(f"../grids/pesca_butano_v01/pesca_butano_v01_{self.terrain}_bathy.nc")
+        self.add_gazetteer("../grids/pesca_butano_v01/line_features.shp")
+        self.add_gazetteer("../grids/pesca_butano_v01/point_features.shp")
 
     def set_bcs(self):
         raise Exception("set_bcs() must be overridden in subclass")
