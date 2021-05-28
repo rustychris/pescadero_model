@@ -199,8 +199,24 @@ run_salt_20160520-v51:
   Test AutoTimestep=4. Slower, no clear advantage.
   
 run_salt_20160520-v52:
-  Longer run, revert some of the debugging settins, and re-include the mouth.
+  Revert some of the debugging settins, and re-include the mouth.
+
+run_salt_20160520-v53: PCH culverts: preserve area, but make it wide and short
+  to distribute the flow across cells.  This allowed the average timestep to
+  go from 0.79 s (v52) to 1.36 s (v53).
+
+run_salt_20160520-v54:
+  Go for 12 m wide, which makes the height 0.0167m
+  Rerun with ugrid output.  
+
+run_salt_20160520-v55:
+  Longer run (2months).  Ran fine, though salinity is not looking great.
+
+run_salt_20160520-v56:
+  Double vertical resolution to see how that affects things.
   
+
+
 
 
 
