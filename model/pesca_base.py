@@ -49,9 +49,8 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
         
         self.mdu['output','StatsInterval']=300 # stat output every 5 minutes?
         self.mdu['output','MapInterval']=6*3600 # 6h.
-        self.mdu['output','MapFormat']=4 # UGRID
-        
         self.mdu['output','RstInterval']=4*86400 # 4days
+        self.mdu['output','MapFormat']=4 # ugrid output format 1= older, 4= Ugrid
 
         self.mdu['numerics','MinTimestepBreak']=0.001
         self.mdu['time','AutoTimestep']=3 # 5=bad. 4 okay but slower, seems no better than 3.
@@ -192,12 +191,36 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
         )
 
     def add_mouth_structure(self):
-        # The mouth may require some testing...
-        # For now, will try using the opening width to set width
-        # rather than CrestWidth. CrestLevel sets lower edge,
+        """
+        Configure structures (or absence of structures) at the mouth
+        """
+        # Uses two structures:
+        self.add_mouth_in_structure()
+        self.add_mouth_out_structure()
+        
+    def add_mouth_in_structure(self):
+        """
+        Add flow control structure at mouth, for the inner of two structures.
+        """
         self.add_Structure(
             type='gate',
-            name='mouth',
+            name='mouth_in',
+            # here the gate is never overtopped
+            GateHeight=10.0, # top of door to bottom of door
+            GateLowerEdgeLevel=0.2, # elevation of bottom of 'gate'
+            GateOpeningWidth=5.0, # width of opening. 
+            CrestLevel=0.2, # roughly matches bathy.
+            # CrestWidth=0.3, # should be the length of the edges
+        )
+        
+    def add_mouth_out_structure(self):
+        """
+        Add flow control structure at mouth, here just the outer of two 
+        structures.
+        """
+        self.add_Structure(
+            type='gate',
+            name='mouth_out',
             # here the gate is never overtopped
             GateHeight=10.0, # top of door to bottom of door
             GateLowerEdgeLevel=0.2, # elevation of bottom of 'gate'
@@ -290,45 +313,126 @@ class PescaButano(PescaButanoBase):
     # time shift for QCM, while we don't have QCM output for
     # the period of the BML data
     qcm_time_offset=np.timedelta64(0,'s')
-    def add_mouth_structure(self):
-        # Override mouth parameters and pull from QCM output.
-        # The mouth may require some testing...
-        # For now, will try using the opening width to set width
-        # rather than CrestWidth. CrestLevel sets lower edge,
+            
+    def add_mouth_in_structure(self):
+        """
+        Set up the flow control structure for the inner mouth structure
+        """
+        ds = self.prep_qcm_data()
 
-        qcm_pre2016=pd.read_csv("../../data/ESA_QCM/ESA_draft_PescaderoQCM_output.csv",
-                                skiprows=[0],usecols=range(7),
-                                parse_dates=['Date (PST)'])
-        qcm_2016_2017=pd.read_csv("../../data/ESA_QCM/ESA_draft_PescaderoQCM_output_4.28.2021.csv",
-                                  skiprows=[0],usecols=range(14),
-                                  parse_dates=['Date (PST)'])
-        # some extra rows in the csv
-        qcm_2016_2017=qcm_2016_2017[ ~qcm_2016_2017['Date (PST)'].isnull() ]
-        qcm=pd.concat([qcm_pre2016,qcm_2016_2017])
-        
-        qcm['time']=qcm['Date (PST)'] + np.timedelta64(8,'h') + self.qcm_time_offset # Shift to UTC.
-        # These are both NAVD88, converted ft=>m
-        # Prefer the modified data when available:
-        ocean_modified=qcm['Modified Ocean Level (feet NAVD88)']
-        # Otherwise the observed data.
-        ocean_level=qcm['Ocean level (feet NAVD88)']
-        qcm['z_ocean']=0.3048 * ocean_modified.combine_first(ocean_level)
-        qcm['z_thalweg']=0.3048 * qcm['Modeled Inlet thalweg elevation (feet NAVD88)']
-        # width
-        qcm['w_inlet']=0.3048* qcm['Modeled Inlet Width (feet)']
+        crest= ds['z_thalweg']
+        width= ds['w_inlet']    
 
-        ds=xr.Dataset.from_dataframe(qcm[ ['time','z_ocean','z_thalweg','w_inlet']].set_index('time'))
+        # Previous way, using a gate
+        # self.add_Structure(
+        #     type='gate',
+        #     name='mouth_in',
+        #     # here the gate is never overtopped
+        #     GateHeight=10.0, # top of door to bottom of door
+        #     GateLowerEdgeLevel=0.2, # elevation of bottom of 'gate'
+        #     GateOpeningWidth=width, # width of opening. 
+        #     CrestLevel=crest, # this will be the thalweg elevation 
+        #     # CrestWidth=0.3, # should be the length of the edges
+        # )
+
+        self.add_Structure(
+            type='generalstructure',
+            name='mouth_in',
+            
+            Upstream2Width=60,                 	# Width left side of structure (m)
+            Upstream1Width=55,                 	# Width structure left side (m)
+            CrestWidth=50,                 	    # Width structure centre (m)
+            Downstream1Width=55,                 	# Width structure right side (m)
+            Downstream2Width=60,                 	# Width right side of structure (m)
+            Upstream2Level=1,                   	# Bed level left side of structure (m AD)
+            Upstream1Level=1,                   	# Bed level left side structure (m AD)
+            CrestLevel=crest,	                    # Bed level at centre of structure (m AD)
+            Downstream1Level=1,                   	# Bed level right side structure (m AD)
+            Downstream2Level=1,                   	# Bed level right side of structure (m AD)
+            GateLowerEdgeLevel=0.2,                  	# Gate lower edge level (m AD)
+            pos_freegateflowcoeff=1,                   	# Positive free gate flow (-)
+            pos_drowngateflowcoeff=1,                   	# Positive drowned gate flow (-)
+            pos_freeweirflowcoeff=1,                   	# Positive free weir flow (-)
+            pos_drownweirflowcoeff=1,                   	# Positive drowned weir flow (-)
+            pos_contrcoeffreegate=1,                   	# Positive flow contraction coefficient (-)
+            neg_freegateflowcoeff=1,                   	# Negative free gate flow (-)
+            neg_drowngateflowcoeff=1,                   	# Negative drowned gate flow (-)
+            neg_freeweirflowcoeff=1,                   	# Negative free weir flow (-)
+            neg_drownweirflowcoeff=1,                   	# Negative drowned weir flow (-)
+            neg_contrcoeffreegate=1,                   	# Negative flow contraction coefficient (-)
+            extraresistance=4,                   	# Extra resistance (-)
+            GateHeight=10,                   	# Vertical gate door height (m)
+            GateOpeningWidth=width,                 	# Horizontal opening width between the doors (m)
+            #GateOpeningHorizontalDirection=symmetric,           	# Horizontal direction of the opening doors
+            )
         
-        crest=ds['z_thalweg']
-        width=ds['w_inlet']
+    def add_mouth_out_structure(self):
+        """
+        Set up flow control structure for the outer mouth structure
+        """
+        ds = self.prep_qcm_data()
+
+        crest= ds['z_thalweg']
+        width= ds['w_inlet']    
         
         self.add_Structure(
-            type='gate',
-            name='mouth',
-            # here the gate is never overtopped
-            GateHeight=10.0, # top of door to bottom of door
-            GateLowerEdgeLevel=0.2, # elevation of bottom of 'gate'
-            GateOpeningWidth=width, # width of opening. 
-            CrestLevel=crest, # this will be the thalweg elevation 
-            # CrestWidth=0.3, # should be the length of the edges
-        )
+            type='generalstructure',
+            name='mouth_out',
+            
+            Upstream2Width=60,                 	# Width left side of structure (m)
+            Upstream1Width=55,                 	# Width structure left side (m)
+            CrestWidth=50,                 	# Width structure centre (m)
+            Downstream1Width=55,                 	# Width structure right side (m)
+            Downstream2Width=60,                 	# Width right side of structure (m)
+            Upstream2Level=1,                   	# Bed level left side of structure (m AD)
+            Upstream1Level=1,                   	# Bed level left side structure (m AD)
+            CrestLevel=crest,	# Bed level at centre of structure (m AD)
+            Downstream1Level=1,                   	# Bed level right side structure (m AD)
+            Downstream2Level=1,                   	# Bed level right side of structure (m AD)
+            GateLowerEdgeLevel=0.2,                  	# Gate lower edge level (m AD)
+            pos_freegateflowcoeff=1,                   	# Positive free gate flow (-)
+            pos_drowngateflowcoeff=1,                   	# Positive drowned gate flow (-)
+            pos_freeweirflowcoeff=1,                   	# Positive free weir flow (-)
+            pos_drownweirflowcoeff=1,                   	# Positive drowned weir flow (-)
+            pos_contrcoeffreegate=1,                   	# Positive flow contraction coefficient (-)
+            neg_freegateflowcoeff=1,                   	# Negative free gate flow (-)
+            neg_drowngateflowcoeff=1,                   	# Negative drowned gate flow (-)
+            neg_freeweirflowcoeff=1,                   	# Negative free weir flow (-)
+            neg_drownweirflowcoeff=1,                   	# Negative drowned weir flow (-)
+            neg_contrcoeffreegate=1,                   	# Negative flow contraction coefficient (-)
+            extraresistance=4,                   	# Extra resistance (-)
+            GateHeight=10,                   	# Vertical gate door height (m)
+            GateOpeningWidth=width,                 	# Horizontal opening width between the doors (m)
+            #GateOpeningHorizontalDirection=symmetric,           	# Horizontal direction of the opening doors
+            )        
+
+    ds_qcm=None
+    def prep_qcm_data(self):
+        '''load QCM output and prepare xr dataset'''
+        if self.ds_qcm is None:
+            qcm_pre2016=pd.read_csv("../../data/ESA_QCM/ESA_draft_PescaderoQCM_output.csv",
+                                    skiprows=[0],usecols=range(7),
+                                    parse_dates=['Date (PST)'])
+            qcm_2016_2017=pd.read_csv("../../data/ESA_QCM/ESA_draft_PescaderoQCM_output_4.28.2021.csv",
+                                      skiprows=[0],usecols=range(14),
+                                      parse_dates=['Date (PST)'])
+            # some extra rows in the csv
+            qcm_2016_2017=qcm_2016_2017[ ~qcm_2016_2017['Date (PST)'].isnull() ]
+            qcm=pd.concat([qcm_pre2016,qcm_2016_2017], sort=False)
+
+            qcm['time']=qcm['Date (PST)'] + np.timedelta64(8,'h') + self.qcm_time_offset # Shift to UTC.
+            # These are both NAVD88, converted ft=>m
+            # Prefer the modified data when available:
+            ocean_modified=qcm['Modified Ocean Level (feet NAVD88)']
+            # Otherwise the observed data.
+            ocean_level=qcm['Ocean level (feet NAVD88)']
+            qcm['z_ocean']=0.3048 * ocean_modified.combine_first(ocean_level)
+            qcm['z_thalweg']=0.3048 * qcm['Modeled Inlet thalweg elevation (feet NAVD88)']
+            # width
+            qcm['w_inlet']=0.3048* qcm['Modeled Inlet Width (feet)']
+
+            ds=xr.Dataset.from_dataframe(qcm[ ['time','z_ocean','z_thalweg','w_inlet']].set_index('time'))
+            self.qcm_ds=ds
+            
+        return self.qcm_ds
+        
