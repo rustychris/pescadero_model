@@ -238,7 +238,11 @@ run_salt_20160520-v62:
   tell.
   
 run_salt_20160520-v63:
-  Adopt Sophie's changes to the mouth structures, adjust start date a bit later.
+  Adopt Sophie's changes to the mouth structures, adjust start date a bit later. This goes
+  for 7 days or so then crashes. Salt doesn't really look any better, mouth flux is anemic,
+  maybe 35% what it should be, while tidal range is pretty close, maybe 85% what it should
+  be. Seeming like a big lack of storage.
+
   
 
   
