@@ -9,15 +9,28 @@ from stompy.grid import unstructured_grid
 
 ##
 
-model=pesca_base.PescaButano(run_start=np.datetime64("2016-07-10 00:00"),
-                             run_stop=np.datetime64("2016-07-14 00:00"),
-                             run_dir="run_salt_20160520-v73",
-                             grid_dir="../grids/pesca_butano_v02"
-                             salinity=True,
-                             temperature=True,
-                             nlayers_3d=28,
-                             pch_area=2.0,
-                             num_procs=16)
+class PescaSigma(pesca_base.PescaButano):
+    def config_layers(self):
+        """
+        Handle layer-related config, separated into its own method to
+        make it easier to specialize in subclasses.
+        Only called for 3D runs.
+        """
+        self.mdu['geometry','Kmx']=self.nlayers_3d # number of layers
+        self.mdu['geometry','LayerType']=1 # sigma
+        
+        # originally 4. 6 is good for avoid scalar issues, but not for stability
+        # 5 is good, and also allows the bed adjustment above to be simple
+        self.mdu['geometry','BedlevType']= 5
+
+model=PescaSigma(run_start=np.datetime64("2016-07-10 00:00"),
+                 run_stop=np.datetime64("2016-07-14 00:00"),
+                 run_dir="run_salt_20160520-v72",
+                 salinity=True,
+                 temperature=True,
+                 nlayers_3d=10,
+                 pch_area=2.0,
+                 num_procs=16)
 
 #model.mdu['numerics','CFLmax']=0.8 
 
@@ -36,7 +49,6 @@ model.mdu['physics','InitialSalinity']=32.0
 # for marsh.
 model.mdu['physics','UnifFrictCoef']=0.055
 
-# model.mdu['geometry','Keepzlayeringatbed']=0 # spurious velocities and mixing?
 # model.mdu['numerics','Vertadvtypsal']=0
 # model.mdu['numerics','TransportMethod']=0
 

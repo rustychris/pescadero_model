@@ -261,13 +261,13 @@ run_salt_20160520-v69:
 
 run_salt_20160520-v70:
   Vertadvtypsal=0. No vertical advection?  Seems unlikely to be good.
-  
-  
+  This is ever so slightly fresher than v66, and appears identical to v69, which is
+  a bit surprising as v69 should have been identical to 66.
 
+run_salt_20160520-v71:
+  Back to v66 settings, but enable checkerboard stuff. Errors out, options not supported
 
-  
+run_salt_20160520-v72: Try sigma!
 
-  
-
-
+run_salt_20160520-v73: Try hex grid in lagoon.
   

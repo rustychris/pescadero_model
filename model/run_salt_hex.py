@@ -9,15 +9,24 @@ from stompy.grid import unstructured_grid
 
 ##
 
-model=pesca_base.PescaButano(run_start=np.datetime64("2016-07-10 00:00"),
-                             run_stop=np.datetime64("2016-07-14 00:00"),
-                             run_dir="run_salt_20160520-v73",
-                             grid_dir="../grids/pesca_butano_v02"
-                             salinity=True,
-                             temperature=True,
-                             nlayers_3d=28,
-                             pch_area=2.0,
-                             num_procs=16)
+class PescaHex(pesc_base.PescaButano):
+    def set_grid_and_features(self):
+        # For now the only difference is the DEM. If they diverge, might go
+        # with separate grid directories instead (maybe with some common features)
+        grid_dir="../grids/pesca_butano_v02"
+        self.set_grid(os.path.join(grid_dir, f"pesca_butano_v02_{self.terrain}_bathy.nc"))
+        self.add_gazetteer(os.path.join(grid_dir,"line_features.shp"))
+        self.add_gazetteer(os.path.join(grid_dir,"point_features.shp"))
+        self.add_gazetteer(os.path.join(grid_dir,"polygon_features.shp"))
+    
+model=PescaHex(run_start=np.datetime64("2016-07-10 00:00"),
+               run_stop=np.datetime64("2016-07-14 00:00"),
+               run_dir="run_salt_20160520-v73",
+               salinity=True,
+               temperature=True,
+               nlayers_3d=28,
+               pch_area=2.0,
+               num_procs=16)
 
 #model.mdu['numerics','CFLmax']=0.8 
 

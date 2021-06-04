@@ -85,13 +85,14 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
         else:
             self.mdu['physics','Idensform']=0 # no density effects
         
-        
     def set_grid_and_features(self):
         # For now the only difference is the DEM. If they diverge, might go
         # with separate grid directories instead (maybe with some common features)
-        self.set_grid(f"../grids/pesca_butano_v01/pesca_butano_v01_{self.terrain}_bathy.nc")
-        self.add_gazetteer("../grids/pesca_butano_v01/line_features.shp")
-        self.add_gazetteer("../grids/pesca_butano_v01/point_features.shp")
+        grid_dir="../grids/pesca_butano_v01"
+        self.set_grid(os.path.join(grid_dir, f"pesca_butano_v01_{self.terrain}_bathy.nc"))
+        self.add_gazetteer(os.path.join(grid_dir,"line_features.shp"))
+        self.add_gazetteer(os.path.join(grid_dir,"point_features.shp"))
+        self.add_gazetteer(os.path.join(grid_dir,"polygon_features.shp"))
 
     def config_layers(self):
         """
