@@ -243,13 +243,31 @@ run_salt_20160520-v63:
   maybe 35% what it should be, while tidal range is pretty close, maybe 85% what it should
   be. Seeming like a big lack of storage.
 
+run_salt_20160520-v65:
+  Switch to Sophie's time period, bump up friction, and change salt IC to 32.0.
+  This led to no freshwater coming down.
+
+run_salt_20160520-v66:
+  Explicitly set salinity BC on creeks. Also with the 2.0 m2 culverts.
+
+run_salt_20160520-v67:
+  Bump culverts to 4 m2, to see if there is any effect. Hardly any effect.  Like 0.01 ppt?
+
+run_salt_20160520-v68:
+  Try keepzlayeringatbed. Slightly slower, and fresher, but no change in strat.
+
+run_salt_20160520-v69:
+  Vertadvtypsal=5. Not expecting anything different...
+
+run_salt_20160520-v70:
+  Vertadvtypsal=0. No vertical advection?  Seems unlikely to be good.
+  
+  
+
+
   
 
   
-  
-
-
-
 
 
   

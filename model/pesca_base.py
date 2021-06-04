@@ -143,19 +143,19 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
         self.add_nmc_structure()
         self.add_nm_ditch_structure()
         self.add_mouth_structure()
-        
+
+    pch_area=0.4*0.5
     def add_pch_structure(self):
         # originally this was a 0.4m x 0.5 m
         # opening. Try instead for a wide, short
         # opening to decease CFL issues.
-        A=0.4*0.5
         z_crest=0.6 # matches bathy.
         width=12.0
         self.add_Structure(
             type='gate',
             name='pch_gate',
             GateHeight=1.5, # top of door to bottom of door
-            GateLowerEdgeLevel=z_crest + A/width, # elevation of top of culvert
+            GateLowerEdgeLevel=z_crest + self.pch_area/width, # elevation of top of culvert
             GateOpeningWidth=0.0, # gate does not open
             CrestLevel=z_crest, 
             CrestWidth=width, # extra wide for decreased CFL limitation
@@ -303,8 +303,12 @@ class PescaButano(PescaButanoBase):
         
         self.add_bcs([bc_butano,bc_pesca])
 
-        # salinity: will default to 0.0 anyway.
-        
+        # Seems that salinity defaults to the IC salinity.
+        if self.salinity:
+            for ck in [bc_butano,bc_pesca]:
+                ck_salt=hm.ScalarBC(parent=ck,scalar='salinity',value=0)
+                self.add_bcs([ck_salt])
+            
         if self.temperature:
             for ck in [bc_butano,bc_pesca]:
                 ck_temp=hm.ScalarBC(parent=ck,scalar='temperature',value=18)
