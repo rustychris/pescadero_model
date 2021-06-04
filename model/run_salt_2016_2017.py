@@ -9,9 +9,9 @@ from stompy.grid import unstructured_grid
 
 ##
 
-model=pesca_base.PescaButano(run_start=np.datetime64("2016-05-20 00:00"),
-                             run_stop=np.datetime64("2016-06-20 12:00"),
-                             run_dir="run_salt_20160520-v57",
+model=pesca_base.PescaButano(run_start=np.datetime64("2016-06-01 00:00"),
+                             run_stop=np.datetime64("2016-06-30 12:00"),
+                             run_dir="run_salt_20160520-v64",
                              salinity=True,
                              temperature=True,
                              nlayers_3d=28,
@@ -21,6 +21,13 @@ model=pesca_base.PescaButano(run_start=np.datetime64("2016-05-20 00:00"),
 
 # Diagnosing time step slowdown
 # model.mdu['time','Timestepanalysis']=1
+model.mdu['time','AutoTimestep']=4 # 5=bad. 4 okay but slower, seems no better than 3.
+
+# model.mdu['numerics','TurbulenceModel']=1 # 0: dead run.  1: should be 5e-5.
+# model.mdu['physics','Vicoww']=5e-3 # 100x greater than before
+
+# Does a saline IC help at all?
+model.mdu['physics','InitialSalinity']=32.0
 
 model.write()
 model.partition()

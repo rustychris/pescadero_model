@@ -212,8 +212,40 @@ run_salt_20160520-v54:
 run_salt_20160520-v55:
   Longer run (2months).  Ran fine, though salinity is not looking great.
 
-run_salt_20160520-v56:
+[56: failed to actually make the change]
+
+run_salt_20160520-v57:
   Double vertical resolution to see how that affects things.
+  Went nan after 3 days.
+  
+run_salt_20160520-v58:
+  Keep extra vertical res, try the slower autotimestep option 4.  Running, though
+  slow. Accidentally overwritten by run with closure turned off.
+  This seems to have lost its BCs.
+  
+run_salt_20160520-v59:
+  Revert stompy changes that were meant to drop obsolete settings from mdu.
+  That gets the BCs.
+  
+run_salt_20160520-v60:
+  Keep the obsolete stuff, but try again with turning off Turb.
+
+run_salt_20160520-v61:
+  Bump up turbulence to 5e-4, turn off turb advection => not stable (?)
+
+run_salt_20160520-v62:
+  vicww up to 5e-3, now stable, if slow. Might be helping with stratification, but hard to
+  tell.
+  
+run_salt_20160520-v63:
+  Adopt Sophie's changes to the mouth structures, adjust start date a bit later. This goes
+  for 7 days or so then crashes. Salt doesn't really look any better, mouth flux is anemic,
+  maybe 35% what it should be, while tidal range is pretty close, maybe 85% what it should
+  be. Seeming like a big lack of storage.
+
+  
+
+  
   
 
 
