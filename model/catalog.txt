@@ -60,5 +60,196 @@ run_salt_20160520-v04
   
 run_salt_20160520-v05
   Running with updated QCM output.
+  This was twitchy, very slow. Also some bad z-layer distribution due to overly deep
+  flow BCs.
   
+run_salt_20160520-v06
+  Try similar but in 2D, diagnosing twitchiness. Went crazy unstable in Butano Marsh.
+
+run_salt_20160520-v07
+  Turn off density effects via Idensform=0, everything else the same. That runs okay,
+  time steps around 10s, salinity spikes to 45psu.
+
+run_salt_20160520-v08
+  Upgrade to 2021.03, and turn density effects back on. Not quite as wild, but it
+  gets crazy salinity and eventually bad velocity, too.
+
+run_salt_20160520-v09
+  Shorten run, increase map output, and change layer type to 1 (sigma), to see if it
+  changes anything even in 2D.  Salt goes nan by hour 2. (temp, too)
+
+run_salt_20160520-v10
+  as in v09, but also setLimtypsa=0. Salt goes nan by hour 2 (temp, too)
+
+run_salt_20160520-v11
+  back to z-layers. and setLimtypsa=0. Temp has spikes as early as 1h in.
+
+run_salt_20160520-v12
+  12 hour run with 5 minute output.  Gets twitchy velocities, and some wacky temperatures
+  but not quite as crazy as before.
+
+run_salt_20160520-v13
+  Near the end of the run still get nonphysical increase in concentration both in
+  temp and salt. This run had conservative 0.45 CFL max, minmod limiter, and 1mm
+  drying threshold.
+  
+run_salt_20160520-v14
+  Any difference from setting Kmx=0 instead of 1? Yes, but still get nonconservative
+  behavior.
+
+run_salt_20160520-v15
+  What about using 1.6.1? No different, or if you squint, a tiny bit worse
+
+run_salt_20160520-v16
+  Shift everything to the origin: no difference.
+
+run_salt_20160520-v17
+  Remove all scalar variation. Temp=18 everywhere, salt=0 everywhere. No accumulation
+  in either one.
+
+run_salt_20160520-v18
+  Increase EpsHU from 0.001 to 0.005 => no improvement.
+
+run_salt_20160520-v19
+  Limtypsa to 2, and LayerType to 0. No change.
+
+run_salt_20160520-v20
+  TransportTimestepping from 0 to 1. No change.
+  
+run_salt_20160520-v21
+  TransportMethod from 1 to 2. Disables transport entirely.
+
+run_salt_20160520-v22
+  TransportMethod from 1 to 0: Seg fault
+
+run_salt_20160520-v23
+  Turn off flow node renumbering, and switch bedlevtype 4->3
+
+run_salt_20160520-v24
+  Just switching bedlevtype. Verifying change in results is from bedlevtype.
+  Verified.
+
+run_salt_20160520-v25
+  What about bedlevtype 5. Even better, though still some (60kg) excess salt.
+
+run_salt_20160520-v26
+  Keep bedlevtype 5, and set to 3D with single layer. Error gets worse (450kg)
+  
+run_salt_20160520-v27
+  bedlevtype 6, keep Kmx=1
+
+run_salt_20160520-v28: test back to small epshu. no change.
+
+run_salt_20160520-v29: test Dcenterinside (no change)
+
+run_salt_20160520-v30: tried reverting most of those changes, but results were
+   worse. Likely due to reverting CFLmax (yes), maybe limtypsa (no).
+
+run_salt_20160520-v31: back to CFLmax=0.45, and I get the 60kg excess salt mass back
+
+run_salt_20160520-v32: CFLmax=0.25? actually worse than CFLmax=0.45
+
+run_salt_20160520-v33: back to CFLmax=0.45, and now go full 3D.
+  -- fixed precision bug in layering
+  -- failing out with short timesteps
+  -- with 14 layers, but no constraint on zbot/ztop/stretch, it runs okay but slow.
+
+run_salt_20160520-v34:
+  Test UGRID output. Not useful it seems.
+  
+run_salt_20160520-v35: trying to find additional output options, but no luck (I think)
+
+run_salt_20160520-v36: test ztop and zbot close to their original values. runs okay.
+
+run_salt_20160520-v37: test ztop higher.  Fails with slow dt.
+
+run_salt_20160520-v38: turn on stairstepping. No improvement.
+
+run_salt_20160520-v39: ?
+run_salt_20160520-v40: ?
+
+run_salt_20160520-v41: test bedlevtype=5
+
+run_salt_20160520-v42:
+ bedlevtype=5, and quantize bathy near interfaces
+
+run_salt_20160520-v43:
+ Attempt to simplify mouth structure, but still get bad dt at boundary
+ 
+run_salt_20160520-v44:
+ New grid!  v01.  Still fails out with timestep issues.
+ 
+run_salt_20160520-v45: Shot in the dark, remove the mouth structure entirely.
+
+run_salt_20160520-v46: Attempt to get more details in *.steps files on timestep issues.
+ -- got steps output, still trying to understand it.
+ 
+run_salt_20160520-v47: Same, but run serial in case this is an MPI issue.
+
+run_salt_20160520-v48: Try numtopsig=3
+
+run_salt_20160520-v49:
+  AutoTimestep=3, from 5, and AutoTimestepNoStruct=1 from 0
+  Seems to have run okay.  Avg. timestep 0.49s, still short, but it finishes.
+
+run_salt_20160520-v50:
+  Back to MPI, make sure it runs okay.  Runs the same as serial.
+
+run_salt_20160520-v51:
+  Test AutoTimestep=4. Slower, no clear advantage.
+  
+run_salt_20160520-v52:
+  Revert some of the debugging settins, and re-include the mouth.
+
+run_salt_20160520-v53: PCH culverts: preserve area, but make it wide and short
+  to distribute the flow across cells.  This allowed the average timestep to
+  go from 0.79 s (v52) to 1.36 s (v53).
+
+run_salt_20160520-v54:
+  Go for 12 m wide, which makes the height 0.0167m
+  Rerun with ugrid output.  
+
+run_salt_20160520-v55:
+  Longer run (2months).  Ran fine, though salinity is not looking great.
+
+[56: failed to actually make the change]
+
+run_salt_20160520-v57:
+  Double vertical resolution to see how that affects things.
+  Went nan after 3 days.
+  
+run_salt_20160520-v58:
+  Keep extra vertical res, try the slower autotimestep option 4.  Running, though
+  slow. Accidentally overwritten by run with closure turned off.
+  This seems to have lost its BCs.
+  
+run_salt_20160520-v59:
+  Revert stompy changes that were meant to drop obsolete settings from mdu.
+  That gets the BCs.
+  
+run_salt_20160520-v60:
+  Keep the obsolete stuff, but try again with turning off Turb.
+
+run_salt_20160520-v61:
+  Bump up turbulence to 5e-4, turn off turb advection => not stable (?)
+
+run_salt_20160520-v62:
+  vicww up to 5e-3, now stable, if slow. Might be helping with stratification, but hard to
+  tell.
+  
+run_salt_20160520-v63:
+  Adopt Sophie's changes to the mouth structures, adjust start date a bit later. This goes
+  for 7 days or so then crashes. Salt doesn't really look any better, mouth flux is anemic,
+  maybe 35% what it should be, while tidal range is pretty close, maybe 85% what it should
+  be. Seeming like a big lack of storage.
+
+  
+
+  
+  
+
+
+
+
+
   
