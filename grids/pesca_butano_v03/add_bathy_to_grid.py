@@ -7,8 +7,8 @@ from stompy.spatial import field
 
 bathy_dir="../../../bathy"
 # The as-built needs to be generated
-bathy_asbuilt_fn=os.path.join(bathy_dir,'compiled-dem-asbuilt-20201230-1m.tif')
-bathy_existing_fn=os.path.join(bathy_dir,'compiled-dem-existing-20201230-1m.tif')
+bathy_asbuilt_fn=os.path.join(bathy_dir,'compiled-dem-asbuilt-202100608-1m.tif')
+bathy_existing_fn=os.path.join(bathy_dir,'compiled-dem-existing-20210608-1m.tif')
 
 ##
 
@@ -30,7 +30,7 @@ for dem_fn, name in [ (bathy_asbuilt_fn,'asbuilt'),
     #   Put bathy on nodes, just direct sampling.
     z_node=dem( g.nodes['x'] )
     g.add_node_field('node_z_bed',z_node,on_exists='overwrite')
-    g.write_ugrid(f'pesca_butano_v01_{name}_bathy.nc',overwrite=True)
+    g.write_ugrid(f'pesca_butano_{name}_bathy.nc',overwrite=True)
 
     del dem
 

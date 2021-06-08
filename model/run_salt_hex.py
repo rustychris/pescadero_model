@@ -1,6 +1,7 @@
 """
 Runs targeting the 2016/2017 period of the BML field data
 """
+import os
 import pesca_base
 import numpy as np
 from stompy.model import hydro_model
@@ -9,7 +10,7 @@ from stompy.grid import unstructured_grid
 
 ##
 
-class PescaHex(pesc_base.PescaButano):
+class PescaHex(pesca_base.PescaButano):
     def set_grid_and_features(self):
         # For now the only difference is the DEM. If they diverge, might go
         # with separate grid directories instead (maybe with some common features)
@@ -29,6 +30,7 @@ model=PescaHex(run_start=np.datetime64("2016-07-10 00:00"),
                num_procs=16)
 
 #model.mdu['numerics','CFLmax']=0.8 
+model.mdu['output','MapInterval']=1800
 
 # Diagnosing time step slowdown
 # model.mdu['time','Timestepanalysis']=1

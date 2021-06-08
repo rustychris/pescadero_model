@@ -264,10 +264,43 @@ run_salt_20160520-v70:
   This is ever so slightly fresher than v66, and appears identical to v69, which is
   a bit surprising as v69 should have been identical to 66.
 
+run_salt_20160520-v71 on farm:
+  slow, but it was split across nodes
+  
+run_salt_20160520-v71b on farm:
+  trying on a single node
+
 run_salt_20160520-v71:
   Back to v66 settings, but enable checkerboard stuff. Errors out, options not supported
 
-run_salt_20160520-v72: Try sigma!
+run_salt_20160520-v72: Try sigma! Fresher, but not better.
 
-run_salt_20160520-v73: Try hex grid in lagoon.
+run_salt_20160520-v73: Try hex grid in lagoon. Very similar to v66.
+
+run_salt_20160520-v74: Sigma, with checkerboard options enabled.
+
+run_salt_20160520-v75: Sigma, include hor momentum filter=1.  Super slow.
+
+
+run_salt_20160520-v76: Sigma, include hor momentum filter=2, openmp... Also super slow.
+
+run_salt_20160520-v77: back to "stock" ish settings, but frequent map output
+ - might have corrupted this, when failing to change name of next run
+
+run_salt_20160520-v78: from 77, transportmethod=0,l dicoww=0.0 : these fail to run.
+
+run_salt_20160520-v78:
+  Just trying a really low friction, 0.01. ran out of disk space. rerunning.
+  
+run_salt_20160520-v79:
+  revert friction, try superbee limiter and no forester. forester was already disabled.
+  This looks identical to 66. So basically I can't make any changes to the limiter.
+  
+  
+
+
+
+
+
+
   
