@@ -296,11 +296,24 @@ run_salt_20160520-v79:
   revert friction, try superbee limiter and no forester. forester was already disabled.
   This looks identical to 66. So basically I can't make any changes to the limiter.
   
-  
+run_salt_20160520-v80:
+  Deepen the lagoon by the UCB grid. Not a big change, but maybe see something?
+
+run_salt_20160520-v81:
+  Spatially variable friction.  Average timestep 1.18s,
+
+run_salt_20160520-v82:
+  Test sensitivity to kmx, back to 14 layers.
+ 
+run_salt_20160520-v83:
+  Compress the vertical range.
+
+run_salt_20160520-v84:
+  Try again turning off closure, test 0 salt diffusivity, 1e-3 viscosity
+  Glorious stratification
+
+run_salt_20160520-v85:
+  Same but longer.
 
 
 
-
-
-
-  
