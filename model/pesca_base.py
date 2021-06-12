@@ -85,7 +85,10 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
         else:
             self.mdu['physics','Idensform']=0 # no density effects
         
-        
+    def update_initial_water_level(self):
+         self.mdu['geometry','WaterLevIni']=2.6 # to overwrite the lagoon waterlevel
+         print('overwritting the initial water level to prescribed value')
+            
     def set_grid_and_features(self):
         # For now the only difference is the DEM. If they diverge, might go
         # with separate grid directories instead (maybe with some common features)
@@ -251,6 +254,15 @@ class PescaButano(PescaButanoBase):
         # (Pillar Point) to SF and Monterey further confirms
         # that Pescadero is probably very close to Monterey.
         
+        # I am trying to use the interpolated QCM waterlevel datas as BC
+        df=pd.read_csv(os.path.join(here,"../forcing/QCM_WL_Interp.csv"),
+                       parse_dates=['time'])
+        
+        ds=xr.Dataset.from_dataframe(df.set_index('time'))
+        ocean_bc=hm.StageBC(name='ocean_bc',water_level=ds['waterlevel'])
+        self.add_bcs([ocean_bc])
+        
+      
         def Hsig_adjustment(da):
             Hsig=cdip_mop.hindcast_dataset(station='SM141', # Pescadero State Beach
                                            start_date=da.time.values[0],
@@ -266,11 +278,11 @@ class PescaButano(PescaButanoBase):
             offset=filters.lowpass_fir(offset,winsize=7*24,window='boxcar')
             return da+offset
 
-        ocean_bc=hm.NOAAStageBC(name='ocean_bc',station=9413450,
-                                filters=[hm.Transform(fn_da=Hsig_adjustment),
-                                         hm.Lowpass(cutoff_hours=2.5)],
-                                cache_dir=cache_dir)
-        self.add_bcs(ocean_bc)
+        # ocean_bc=hm.NOAAStageBC(name='ocean_bc',station=9413450,
+        #                         filters=[hm.Transform(fn_da=Hsig_adjustment),
+        #                                   hm.Lowpass(cutoff_hours=2.5)],
+        #                         cache_dir=cache_dir)
+        # self.add_bcs(ocean_bc)
         if self.salinity:
             # ballpark value pulled from BML time series
             ocean_salt=hm.ScalarBC(parent=ocean_bc,scalar='salinity',value=33.0)
@@ -429,9 +441,25 @@ class PescaButano(PescaButanoBase):
             qcm['z_ocean']=0.3048 * ocean_modified.combine_first(ocean_level)
             qcm['z_thalweg']=0.3048 * qcm['Modeled Inlet thalweg elevation (feet NAVD88)']
             # width
-            qcm['w_inlet']=0.3048* qcm['Modeled Inlet Width (feet)']
+            qcm['w_inlet']=0.3048* qcm['Modeled Inlet Width (feet)'].fillna(0)
+            
+            # Other Sources and Sinks: convert form ft3/s to m3/s
+            qcm['seepage']= qcm['Modeled seepage'] * 0.02831685 # from ft3/s to m3/s
+            qcm['seepage_abs']=qcm['seepage']*-1 # need to be in absolute values
+            qcm.loc[qcm['seepage_abs'] < 0,'seepage_abs'] = 0 # removing seepage from ocean to lagoon
+                       
+            # Values are already [-]. Negative rainfall --> evapotranspiration
+            qcm['evapotr']= qcm['Modeled ET'] * 0.02831685 # ft3/s to m3/s
+            # evapotr/grid_area*1000 --> m3 to mm
+            # *3600 --> s to hour
+            grid_area= 1940000 # m2
+            qcm['evapotr_mmhour']=qcm['evapotr']/grid_area*1000*3600
+            # data already [+]            
+            qcm['wave_overtop']= qcm['Modeled wave overtopping'] * 0.02831685 # from ft3/s to m3/s
 
-            ds=xr.Dataset.from_dataframe(qcm[ ['time','z_ocean','z_thalweg','w_inlet']].set_index('time'))
+            ds=xr.Dataset.from_dataframe(qcm[ 
+                ['time','z_ocean','z_thalweg','w_inlet','seepage_abs','evapotr_mmhour','wave_overtop']]
+                .set_index('time'))
             self.qcm_ds=ds
             
         return self.qcm_ds
