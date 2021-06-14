@@ -60,7 +60,7 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
 
         if self.salinity:
             self.mdu['physics','Salinity']=1
-            self.mdu['physics','InitialSalinity']=0.0
+            self.mdu['physics','InitialSalinity']=32.0
         else:
             self.mdu['physics','Salinity']=0
         if self.temperature:
@@ -93,6 +93,26 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
         self.add_gazetteer(os.path.join(grid_dir,"line_features.shp"))
         self.add_gazetteer(os.path.join(grid_dir,"point_features.shp"))
         self.add_gazetteer(os.path.join(grid_dir,"polygon_features.shp"))
+
+    def friction_dataarray(self,type='manning'):
+        polys=self.match_gazetteer(geom_type='Polygon',type=type)
+
+        xyn=np.zeros( (self.grid.Nnodes(),3), np.float64)
+        xyn[:,:2]=self.grid.nodes['x']
+        # Default to the uniform friction coefficient
+        xyn[:,2]=self.mdu['physics','UnifFrictCoef']
+
+        for poly in polys:
+            sel=self.grid.select_nodes_intersecting(poly['geom'])
+            xyn[sel,2]=poly['n']
+        ds=xr.Dataset()
+        ds['x']=('sample',),xyn[:,0]
+        ds['y']=('sample',),xyn[:,1]
+        ds['n']=('sample',),xyn[:,2]
+        ds=ds.set_coords(['x','y'])
+        da=ds['n']
+        return da
+        
 
     def config_layers(self):
         """
