@@ -9,3 +9,4 @@ run_tide_test-v*
 run_filldrain-v*
 run_flow_test-*
 run_salt_20160520*
+slurm*
