@@ -22,7 +22,7 @@ class PescaDeeper(pesca_base.PescaButano):
 
 model=PescaDeeper(run_start=np.datetime64("2016-06-10 00:00"),
                   run_stop=np.datetime64("2016-08-14 00:00"),
-                  run_dir="run_salt_20160520-v85",
+                  run_dir="run_salt_20160520-v87",
                   salinity=True,
                   temperature=True,
                   nlayers_3d=28,
@@ -33,8 +33,8 @@ model.mdu['time','AutoTimestep']=4 # 5=bad. 4 okay but slower, seems no better t
 model.mdu['output','MapInterval']=24*3600
 
 model.mdu['numerics','TurbulenceModel']=1 # 0: dead run.  1: should be 5e-5.
-model.mdu['physics','Vicoww']=1e-3 # 100x greater than before
-model.mdu['physics','Dicoww']=0
+model.mdu['physics','Vicoww']=2e-4 
+model.mdu['physics','Dicoww']=1e-10
 
 # Try bumping up friction (if this looks promising, will make it just for
 # upper channels, use something lower for lagoon, and something high-ish
