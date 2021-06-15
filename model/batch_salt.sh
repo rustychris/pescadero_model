@@ -3,13 +3,11 @@
 #SBATCH -o slurm_out-%j.output
 #SBATCH -e slurm_out-%j.output
 #SBATCH --partition high2
-#SBATCH --mem-per-cpu 4G
-#SBATCH -n 16
+#SBATCH --mem-per-cpu 2G
+#SBATCH -n 32
 #SBATCH -N 1
-#SBATCH --time 1-00:00:00
+#SBATCH --time 3-00:00:00
 
-# there is no -n option given in this script!
-# specify -n <num cores> on the command line to sbatch.
 # DFMROOT=/home/rustyh/src/dfm/delft3dfm_2021.01/lnx64
 # export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$DFMROOT/lib
 
