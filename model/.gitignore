@@ -10,3 +10,4 @@ run_filldrain-v*
 run_flow_test-*
 run_salt_20160520*
 figs-20210611
+slurm*

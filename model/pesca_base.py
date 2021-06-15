@@ -454,7 +454,8 @@ class PescaButano(PescaButanoBase):
             qcm['z_ocean']=0.3048 * ocean_modified.combine_first(ocean_level)
             qcm['z_thalweg']=0.3048 * qcm['Modeled Inlet thalweg elevation (feet NAVD88)']
             # width
-            qcm['w_inlet']=0.3048* qcm['Modeled Inlet Width (feet)']
+            w=0.3048*qcm['Modeled Inlet Width (feet)']
+            qcm['w_inlet']=np.where(np.isfinite(w),w,0.0)
 
             ds=xr.Dataset.from_dataframe(qcm[ ['time','z_ocean','z_thalweg','w_inlet']].set_index('time'))
             self.qcm_ds=ds
