@@ -371,5 +371,16 @@ run_salt_20160520-v93-restart
   A restart from a nice tidal portion of v93 for an animation.  Seems very slow
   to get going. Second go round, fails at 2.5days
 
+run_salt_20160520-v96
+  Like 93, but use grid with deep-bias bathymetry.
+  
+run_salt_20160520-v97
+  Try 96 again, but with more map output and more conservative timestep (CFLmax=0.4, from 0.7)
+  
+run_salt_20160520-v98
+  Again again, but on cws-linuxmodeling
+  
+  
+
 
   
