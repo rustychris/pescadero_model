@@ -378,8 +378,19 @@ run_salt_20160520-v97
   Try 96 again, but with more map output and more conservative timestep (CFLmax=0.4, from 0.7)
   
 run_salt_20160520-v98
-  Again again, but on cws-linuxmodeling
+  Again again, but on cws-linuxmodeling. Crashes. Looks like crazy water levels start around
+  the ocean boundary.
+
+run_salt_20160520-v99
+  Again^3, but lower ZBot to -1.7m
+
+run_salt_20160520-v100
+  Back to farm, keep that ZBot. Decrease N Marsh friction to 0.015. Back to longer run
+  with sparse map output.
   
+  
+
+
   
 
 

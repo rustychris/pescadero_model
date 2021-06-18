@@ -348,18 +348,6 @@ class PescaButano(PescaButanoBase):
         crest= ds['z_thalweg']
         width= ds['w_inlet']    
 
-        # Previous way, using a gate
-        # self.add_Structure(
-        #     type='gate',
-        #     name='mouth_in',
-        #     # here the gate is never overtopped
-        #     GateHeight=10.0, # top of door to bottom of door
-        #     GateLowerEdgeLevel=0.2, # elevation of bottom of 'gate'
-        #     GateOpeningWidth=width, # width of opening. 
-        #     CrestLevel=crest, # this will be the thalweg elevation 
-        #     # CrestWidth=0.3, # should be the length of the edges
-        # )
-
         self.add_Structure(
             type='generalstructure',
             name='mouth_in',

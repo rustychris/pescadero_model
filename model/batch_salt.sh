@@ -3,7 +3,7 @@
 #SBATCH -o slurm_out-%j.output
 #SBATCH -e slurm_out-%j.output
 #SBATCH --partition high2
-#SBATCH --mem-per-cpu 2G
+#SBATCH --mem-per-cpu 4G
 #SBATCH -n 16
 #SBATCH -N 1
 #SBATCH --time 3-00:00:00
