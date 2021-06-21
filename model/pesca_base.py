@@ -10,7 +10,8 @@ import stompy.model.delft.dflow_model as dfm
 import stompy.model.hydro_model as hm
 from stompy.io.local import cdip_mop
 from stompy import utils, filters
-
+from stompy.spatial import linestring_utils
+from shapely import geometry
 import local_config
 
 here=os.path.dirname(__file__)
@@ -154,10 +155,31 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
     def set_bcs(self):
         raise Exception("set_bcs() must be overridden in subclass")
 
+    def add_monitor_transects(self,features,dx=None):
+        """
+        Add a sampled transect. dx=None will eventually just pull each
+        cell along the line.  otherwise sample at even distance dx.
+        """
+        # Sample each cell intersecting the given feature
+        assert dx is not None,"Not ready for adaptive transect resolution"
+        for feat in features:
+            print(feat)
+            pnts=np.array(feat['geom'])
+            pnts=linestring_utils.resample_linearring(pnts,dx,closed_ring=False)
+            print("Resampling leads to %d points for %s"%(len(pnts),feat['name']))
+            # punt with length of the name -- not sure if DFM is okay with >20 characters
+            pnts_and_names=[ dict(geom=geometry.Point(pnt),name="%s_%04d"%(feat['name'][:13],i))
+                             for i,pnt in enumerate(pnts) ]
+            self.add_monitor_points(pnts_and_names)
+
     def add_monitoring(self):
         print("Call to add_monitoring")
         self.add_monitor_points(self.match_gazetteer(geom_type='Point',type='monitor'))
+        # Bad choice of naming. features labeled 'transect' are for cross-sections.
+        # Features labeled 'section' are for sampled transects
         self.add_monitor_sections(self.match_gazetteer(geom_type='LineString',type='transect'))
+        self.add_monitor_transects(self.match_gazetteer(geom_type='LineString',type='section'),
+                                   dx=5.0)
 
     def add_structures(self):
         self.add_pch_structure()
