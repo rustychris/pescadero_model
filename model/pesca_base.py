@@ -6,6 +6,9 @@ import xarray as xr
 import numpy as np
 import pandas as pd
 
+from scipy.interpolate import interp1d
+from scipy.interpolate import splev, splrep
+
 import stompy.model.delft.dflow_model as dfm
 import stompy.model.hydro_model as hm
 from stompy.io.local import cdip_mop
@@ -36,6 +39,7 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
     z_min=-0.25 # Based on low point in lagoon
     z_max=3.25  # Based on highest water level in lagoon
     nlayers_3d=14 # 0.25m layers for z_min/max above
+    deep_bed_layer=True # make the deepest interface at least as deep as the deepest node
     
     def __init__(self,*a,**k):
         super(PescaButanoBase,self).__init__(*a,**k)
@@ -136,6 +140,17 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
         z_node=self.grid.nodes['node_z_bed'] # positive up
         kmx=self.nlayers_3d
         z_interfaces=np.linspace(self.z_min,self.z_max,kmx+1)
+
+        write_stretch=False 
+        if self.deep_bed_layer:
+            grid_z_min=self.grid.nodes['node_z_bed'].min()
+            if z_interfaces[0]>grid_z_min:
+                self.log.info("Bottom interface moved from %.3f to %.3f to match deepest node of grid"%
+                              (z_interfaces[0], grid_z_min))
+                z_interfaces[0]=grid_z_min
+                self.mdu['geometry','ZlayBot']=grid_z_min
+                write_stretch=True
+            
         dz_bed=z_interfaces[ np.searchsorted(z_interfaces,z_node).clip(0,kmx)] - z_node
         thresh=min(0.05,0.2*np.median(np.diff(z_interfaces)))
         # will deepen these nodes.  Could push them up or down depending
@@ -149,13 +164,17 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
         # 5 is good, and also allows the bed adjustment above to be simple
         self.mdu['geometry','BedlevType']= 5
 
-        if 0: # Don't worry with stretching
+        if write_stretch:
             # Based on this post:
             # https://oss.deltares.nl/web/delft3dfm/general1/-/message_boards/message/1865851
             self.mdu['geometry','StretchType']=1
-            frac=100./self.nlayers_3d
+            cumul=100*(z_interfaces-z_interfaces[0])/(z_interfaces[-1] - z_interfaces[0])
+            # round to 0 decimals to be completely sure the sum is exact.
+            # hopefully 1 decimal is okay. gives more even layers when getting up to 25+ layers.
+            cumul=np.round(cumul,1)
+            fracs=np.diff(cumul)
             # something like 10 10 10 10 10 10 10 10 10 10
-            self.mdu['geometry','stretchCoef']=" ".join(["%.4f"%frac]*self.nlayers_3d)
+            self.mdu['geometry','stretchCoef']=" ".join(["%.4f"%frac for frac in fracs])
         
     def set_bcs(self):
         raise Exception("set_bcs() must be overridden in subclass")
@@ -171,7 +190,7 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
             print(feat)
             pnts=np.array(feat['geom'])
             pnts=linestring_utils.resample_linearring(pnts,dx,closed_ring=False)
-            print("Resampling leads to %d points for %s"%(len(pnts),feat['name']))
+            self.log.info("Resampling leads to %d points for %s"%(len(pnts),feat['name']))
             # punt with length of the name -- not sure if DFM is okay with >20 characters
             pnts_and_names=[ dict(geom=geometry.Point(pnt),name="%s_%04d"%(feat['name'][:13],i))
                              for i,pnt in enumerate(pnts) ]
@@ -285,8 +304,57 @@ class PescaButano(PescaButanoBase):
         self.set_mouth_bc()
 
     def set_mouth_bc(self):
-        # self.add_bcs(hm.StageBC(name='ocean_bc',water_level=1.0))
+        ocean_bc=self.set_mouth_stage_qcm()
+        assert ocean_bc,"mouth waterlevel BC method probably should return a BC"
         
+        if self.salinity:
+            # ballpark value pulled from BML time series
+            ocean_salt=hm.ScalarBC(parent=ocean_bc,scalar='salinity',value=33.0)
+            self.add_bcs([ocean_salt])
+        if self.temperature:
+            # ballpark value pulled from BML time series during open mouth,
+            # lower sensor at NCK.
+            ocean_temp=hm.ScalarBC(parent=ocean_bc,scalar='temperature',value=15.0)
+            self.add_bcs([ocean_temp])
+
+    def set_mouth_stage_qcm(self):
+        """
+        Use the interpolated QCM waterlevel datas as BC.
+        Stock QCM output is a bit coarse (dt=1h) for stage, so 
+        smooth it at shorter time step
+        """
+        da=self.prep_qcm_waterlevel_resampled()
+        ocean_bc=hm.StageBC(name='ocean_bc',water_level=da)
+        self.add_bcs([ocean_bc])
+        return ocean_bc
+    
+    def prep_qcm_waterlevel_resampled(self):
+        """
+        Upsample the QCM waterlevel data to 6 minutes, smoothed
+        with a cubic spline
+        """
+        qcm_ds=self.prep_qcm_data()
+        
+        # Apply the spline, no smoothing, to the entire record and return
+        # as DataArray
+
+        t_dnum = utils.to_dnum(qcm_ds.time)
+        t_new = np.arange(qcm_ds.time.values[0], qcm_ds.time.values[-1],
+                          np.timedelta64(6,'m')) # at 6 minutes intervals. 
+        t_new_dnum = utils.to_dnum(t_new)
+
+        spl = splrep(t_dnum, qcm_ds.z_ocean.values)
+        qcm_wl_interp = splev(t_new_dnum, spl)
+        da=xr.DataArray(qcm_wl_interp,dims=['time'],coords=dict(time=t_new))
+        return da
+        
+    def set_mouth_stage_noaa(self):
+        """
+        Drive water level at the mouth from the NOAA gauge
+        at Monterey and an empirical offset accounting for
+        wave setup.
+        Returns the BC object after adding it to the model
+        """
         # Tides - this is NOAA gauge at Monterey
         #   Probably a bit early -- Pescadero sits between
         # Monterey and SF gauges, and there is a 3200s lag between
@@ -298,16 +366,7 @@ class PescaButano(PescaButanoBase):
         # stations (Ano Nuevo) and short-term harmonic station
         # (Pillar Point) to SF and Monterey further confirms
         # that Pescadero is probably very close to Monterey.
-        
-        # I am trying to use the interpolated QCM waterlevel datas as BC
-        df=pd.read_csv(os.path.join(here,"../forcing/QCM_WL_Interp.csv"),
-                       parse_dates=['time'])
-        
-        ds=xr.Dataset.from_dataframe(df.set_index('time'))
-        ocean_bc=hm.StageBC(name='ocean_bc',water_level=ds['waterlevel'])
-        self.add_bcs([ocean_bc])
-        
-      
+
         def Hsig_adjustment(da):
             Hsig=cdip_mop.hindcast_dataset(station='SM141', # Pescadero State Beach
                                            start_date=da.time.values[0],
@@ -323,20 +382,12 @@ class PescaButano(PescaButanoBase):
             offset=filters.lowpass_fir(offset,winsize=7*24,window='boxcar')
             return da+offset
 
-        # ocean_bc=hm.NOAAStageBC(name='ocean_bc',station=9413450,
-        #                         filters=[hm.Transform(fn_da=Hsig_adjustment),
-        #                                   hm.Lowpass(cutoff_hours=2.5)],
-        #                         cache_dir=cache_dir)
-        # self.add_bcs(ocean_bc)
-        if self.salinity:
-            # ballpark value pulled from BML time series
-            ocean_salt=hm.ScalarBC(parent=ocean_bc,scalar='salinity',value=33.0)
-            self.add_bcs([ocean_salt])
-        if self.temperature:
-            # ballpark value pulled from BML time series during open mouth,
-            # lower sensor at NCK.
-            ocean_temp=hm.ScalarBC(parent=ocean_bc,scalar='temperature',value=15.0)
-            self.add_bcs([ocean_temp])
+        ocean_bc=hm.NOAAStageBC(name='ocean_bc',station=9413450,
+                                filters=[hm.Transform(fn_da=Hsig_adjustment),
+                                          hm.Lowpass(cutoff_hours=2.5)],
+                                cache_dir=cache_dir)
+        self.add_bcs(ocean_bc)
+        return ocean_bc
 
     def set_creek_bcs(self):
         df=pd.read_csv(os.path.join(here,"../forcing/tu_flows/TU_flows_SI.csv"),
