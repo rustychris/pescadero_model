@@ -10,7 +10,8 @@ import stompy.model.delft.dflow_model as dfm
 import stompy.model.hydro_model as hm
 from stompy.io.local import cdip_mop
 from stompy import utils, filters
-
+from stompy.spatial import linestring_utils
+from shapely import geometry
 import local_config
 
 here=os.path.dirname(__file__)
@@ -60,7 +61,7 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
 
         if self.salinity:
             self.mdu['physics','Salinity']=1
-            self.mdu['physics','InitialSalinity']=0.0
+            self.mdu['physics','InitialSalinity']=32.0
         else:
             self.mdu['physics','Salinity']=0
         if self.temperature:
@@ -86,15 +87,38 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
             self.mdu['physics','Idensform']=0 # no density effects
         
     def update_initial_water_level(self):
-         self.mdu['geometry','WaterLevIni']=2.6 # to overwrite the lagoon waterlevel
-         print('overwritting the initial water level to prescribed value')
+        # To be updated to pull QCM lagoon water level at self.run_start
+        self.mdu['geometry','WaterLevIni']=2.6 # to overwrite the lagoon waterlevel
+        print('overwritting the initial water level to prescribed value')
             
     def set_grid_and_features(self):
         # For now the only difference is the DEM. If they diverge, might go
         # with separate grid directories instead (maybe with some common features)
-        self.set_grid(f"../grids/pesca_butano_v01/pesca_butano_v01_{self.terrain}_bathy.nc")
-        self.add_gazetteer("../grids/pesca_butano_v01/line_features.shp")
-        self.add_gazetteer("../grids/pesca_butano_v01/point_features.shp")
+        grid_dir="../grids/pesca_butano_v01"
+        self.set_grid(os.path.join(grid_dir, f"pesca_butano_v01_{self.terrain}_bathy.nc"))
+        self.add_gazetteer(os.path.join(grid_dir,"line_features.shp"))
+        self.add_gazetteer(os.path.join(grid_dir,"point_features.shp"))
+        self.add_gazetteer(os.path.join(grid_dir,"polygon_features.shp"))
+
+    def friction_dataarray(self,type='manning'):
+        polys=self.match_gazetteer(geom_type='Polygon',type=type)
+
+        xyn=np.zeros( (self.grid.Nnodes(),3), np.float64)
+        xyn[:,:2]=self.grid.nodes['x']
+        # Default to the uniform friction coefficient
+        xyn[:,2]=self.mdu['physics','UnifFrictCoef']
+
+        for poly in polys:
+            sel=self.grid.select_nodes_intersecting(poly['geom'])
+            xyn[sel,2]=poly['n']
+        ds=xr.Dataset()
+        ds['x']=('sample',),xyn[:,0]
+        ds['y']=('sample',),xyn[:,1]
+        ds['n']=('sample',),xyn[:,2]
+        ds=ds.set_coords(['x','y'])
+        da=ds['n']
+        return da
+        
 
     def config_layers(self):
         """
@@ -136,29 +160,50 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
     def set_bcs(self):
         raise Exception("set_bcs() must be overridden in subclass")
 
+    def add_monitor_transects(self,features,dx=None):
+        """
+        Add a sampled transect. dx=None will eventually just pull each
+        cell along the line.  otherwise sample at even distance dx.
+        """
+        # Sample each cell intersecting the given feature
+        assert dx is not None,"Not ready for adaptive transect resolution"
+        for feat in features:
+            print(feat)
+            pnts=np.array(feat['geom'])
+            pnts=linestring_utils.resample_linearring(pnts,dx,closed_ring=False)
+            print("Resampling leads to %d points for %s"%(len(pnts),feat['name']))
+            # punt with length of the name -- not sure if DFM is okay with >20 characters
+            pnts_and_names=[ dict(geom=geometry.Point(pnt),name="%s_%04d"%(feat['name'][:13],i))
+                             for i,pnt in enumerate(pnts) ]
+            self.add_monitor_points(pnts_and_names)
+
     def add_monitoring(self):
         print("Call to add_monitoring")
         self.add_monitor_points(self.match_gazetteer(geom_type='Point',type='monitor'))
+        # Bad choice of naming. features labeled 'transect' are for cross-sections.
+        # Features labeled 'section' are for sampled transects
         self.add_monitor_sections(self.match_gazetteer(geom_type='LineString',type='transect'))
+        self.add_monitor_transects(self.match_gazetteer(geom_type='LineString',type='section'),
+                                   dx=5.0)
 
     def add_structures(self):
         self.add_pch_structure()
         self.add_nmc_structure()
         self.add_nm_ditch_structure()
         self.add_mouth_structure()
-        
+
+    pch_area=0.4*0.5
     def add_pch_structure(self):
         # originally this was a 0.4m x 0.5 m
         # opening. Try instead for a wide, short
         # opening to decease CFL issues.
-        A=0.4*0.5
         z_crest=0.6 # matches bathy.
         width=12.0
         self.add_Structure(
             type='gate',
             name='pch_gate',
             GateHeight=1.5, # top of door to bottom of door
-            GateLowerEdgeLevel=z_crest + A/width, # elevation of top of culvert
+            GateLowerEdgeLevel=z_crest + self.pch_area/width, # elevation of top of culvert
             GateOpeningWidth=0.0, # gate does not open
             CrestLevel=z_crest, 
             CrestWidth=width, # extra wide for decreased CFL limitation
@@ -315,8 +360,12 @@ class PescaButano(PescaButanoBase):
         
         self.add_bcs([bc_butano,bc_pesca])
 
-        # salinity: will default to 0.0 anyway.
-        
+        # Seems that salinity defaults to the IC salinity.
+        if self.salinity:
+            for ck in [bc_butano,bc_pesca]:
+                ck_salt=hm.ScalarBC(parent=ck,scalar='salinity',value=0)
+                self.add_bcs([ck_salt])
+            
         if self.temperature:
             for ck in [bc_butano,bc_pesca]:
                 ck_temp=hm.ScalarBC(parent=ck,scalar='temperature',value=18)
@@ -334,18 +383,6 @@ class PescaButano(PescaButanoBase):
 
         crest= ds['z_thalweg']
         width= ds['w_inlet']    
-
-        # Previous way, using a gate
-        # self.add_Structure(
-        #     type='gate',
-        #     name='mouth_in',
-        #     # here the gate is never overtopped
-        #     GateHeight=10.0, # top of door to bottom of door
-        #     GateLowerEdgeLevel=0.2, # elevation of bottom of 'gate'
-        #     GateOpeningWidth=width, # width of opening. 
-        #     CrestLevel=crest, # this will be the thalweg elevation 
-        #     # CrestWidth=0.3, # should be the length of the edges
-        # )
 
         self.add_Structure(
             type='generalstructure',
@@ -440,6 +477,7 @@ class PescaButano(PescaButanoBase):
             ocean_level=qcm['Ocean level (feet NAVD88)']
             qcm['z_ocean']=0.3048 * ocean_modified.combine_first(ocean_level)
             qcm['z_thalweg']=0.3048 * qcm['Modeled Inlet thalweg elevation (feet NAVD88)']
+
             # width
             qcm['w_inlet']=0.3048* qcm['Modeled Inlet Width (feet)'].fillna(0)
             
@@ -452,7 +490,9 @@ class PescaButano(PescaButanoBase):
             qcm['evapotr']= qcm['Modeled ET'] * 0.02831685 # ft3/s to m3/s
             # evapotr/grid_area*1000 --> m3 to mm
             # *3600 --> s to hour
-            grid_area= 1940000 # m2
+            # would be better to figure out time-average wet area. This figure is the
+            # total grid area.
+            grid_area=1940000 # m2
             qcm['evapotr_mmhour']=qcm['evapotr']/grid_area*1000*3600
             # data already [+]            
             qcm['wave_overtop']= qcm['Modeled wave overtopping'] * 0.02831685 # from ft3/s to m3/s

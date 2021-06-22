@@ -243,13 +243,155 @@ run_salt_20160520-v63:
   maybe 35% what it should be, while tidal range is pretty close, maybe 85% what it should
   be. Seeming like a big lack of storage.
 
+run_salt_20160520-v65:
+  Switch to Sophie's time period, bump up friction, and change salt IC to 32.0.
+  This led to no freshwater coming down.
+
+run_salt_20160520-v66:
+  Explicitly set salinity BC on creeks. Also with the 2.0 m2 culverts.
+
+run_salt_20160520-v67:
+  Bump culverts to 4 m2, to see if there is any effect. Hardly any effect.  Like 0.01 ppt?
+
+run_salt_20160520-v68:
+  Try keepzlayeringatbed. Slightly slower, and fresher, but no change in strat.
+
+run_salt_20160520-v69:
+  Vertadvtypsal=5. Not expecting anything different...
+
+run_salt_20160520-v70:
+  Vertadvtypsal=0. No vertical advection?  Seems unlikely to be good.
+  This is ever so slightly fresher than v66, and appears identical to v69, which is
+  a bit surprising as v69 should have been identical to 66.
+
+run_salt_20160520-v71 on farm:
+  slow, but it was split across nodes
+  
+run_salt_20160520-v71b on farm:
+  trying on a single node
+
+run_salt_20160520-v71:
+  Back to v66 settings, but enable checkerboard stuff. Errors out, options not supported
+
+run_salt_20160520-v72: Try sigma! Fresher, but not better.
+
+run_salt_20160520-v73: Try hex grid in lagoon. Very similar to v66.
+
+run_salt_20160520-v74: Sigma, with checkerboard options enabled.
+
+run_salt_20160520-v75: Sigma, include hor momentum filter=1.  Super slow.
+
+
+run_salt_20160520-v76: Sigma, include hor momentum filter=2, openmp... Also super slow.
+
+run_salt_20160520-v77: back to "stock" ish settings, but frequent map output
+ - might have corrupted this, when failing to change name of next run
+
+run_salt_20160520-v78: from 77, transportmethod=0,l dicoww=0.0 : these fail to run.
+
+run_salt_20160520-v78:
+  Just trying a really low friction, 0.01. ran out of disk space. rerunning.
+  
+run_salt_20160520-v79:
+  revert friction, try superbee limiter and no forester. forester was already disabled.
+  This looks identical to 66. So basically I can't make any changes to the limiter.
+  
+run_salt_20160520-v80:
+  Deepen the lagoon by the UCB grid. Not a big change, but maybe see something?
+
+run_salt_20160520-v81:
+  Spatially variable friction.  Average timestep 1.18s,
+
+run_salt_20160520-v82:
+  Test sensitivity to kmx, back to 14 layers.
+ 
+run_salt_20160520-v83:
+  Compress the vertical range.
+
+run_salt_20160520-v84:
+  Try again turning off closure, test 0 salt diffusivity, 1e-3 viscosity
+  Glorious stratification
+
+run_salt_20160520-v85:
+  Same but longer. Salt went nan after 10 days.
+
+run_salt_20160520-v86:
+  Farm run, with Dicoww=0 and turb model=3. Also goes nan, like v85.
+
+run_salt_20160520-v87:
+  Like v85, but include 1e-10 dicoww, and drop vicoww to 2e-4.
+  cws-linuxmodeling. Stuck around 1.5h, probably salt went nan.
+
+run_salt_20160520-v88:
+  Like v85, but include 1e-10 dicoww, and drop vicoww to 2e-4.
+  Farm. First go at this failed quickly. Bump Vicoww back to 1e-3,
+  try again in the same directory
+
+run_salt_20160520-v89:
+  Like v86, but VertAdvTypSal=4, and forester=50. Crashed after 18h.
+  Timestep went to 0. Try again but with forester=20. Pretty slow, at 0.4s,
+  and model bottom salinity is non-physical, saltier 
+
+[Fixed(?) qcm width nans]
+
+run_salt_20160520-v90:
+  Turb=3, dicoww=1e-7, vertadv=6.
+  Wedged at 7d. This is with the more conservative time stepping, already.
+  
+run_salt_20160520-v91:
+  Turb=3, dicoww=1e-8, vertadv=6.
+  Also wedged, same dt->0 then 300.0, but this one at 15h.
+
+run_salt_20160520-v92:
+  Turb=3, dicoww=1e-7, vertadv=6, and no layer compression.
+  Still going, very slow though. Timestep currently at 1s, but
+  it's running at <3x realtime. It's scheduled okay. It's on a
+  somewhat busy node. Checking back later, it's averaging 13x
+  realtime. dt still low, 0.8s or so.  And it's only 9 days in.
+  Around 16days it went nan. killed.
+
+run_salt_20160520-v93:
+  Turb=3, dicoww=1e-6, vertadv=6, and no layer compression.
+  Checked on it and it's 14 days in, dt=0.57s, low, but maybe ok?
+  Clocking in at 26x realtime.
+  dt getting even lower, but it's running.
+  47% done, dt something like 3s? But it's gone off the rails.
+  Went nan around 7/4.
+  
+run_salt_20160520-v94: identical to 92, trying to understand if the
+  issue is the node or the code. This went to dt=0 at 9d13:30. A little
+  beyond 92. killed.
+
+run_salt_20160520-v95: bump up to 32 cores, and CFLmax=0.4, otherwise
+  repeat of 92, dicoww=1e-7. Still going. dt=0.6, which considering the CFLmax
+  is not too bad. But it's only 3 days into the run. Trouble likely lies ahead.
+  23% done. Stuck at 38%, dt->0, 24.5 days
+  
+run_salt_20160520-v93-restart
+  A restart from a nice tidal portion of v93 for an animation.  Seems very slow
+  to get going. Second go round, fails at 2.5days
+
+run_salt_20160520-v96
+  Like 93, but use grid with deep-bias bathymetry.
+  
+run_salt_20160520-v97
+  Try 96 again, but with more map output and more conservative timestep (CFLmax=0.4, from 0.7)
+  
+run_salt_20160520-v98
+  Again again, but on cws-linuxmodeling. Crashes. Looks like crazy water levels start around
+  the ocean boundary.
+
+run_salt_20160520-v99
+  Again^3, but lower ZBot to -1.7m
+
+run_salt_20160520-v100
+  Back to farm, keep that ZBot. Decrease N Marsh friction to 0.015. Back to longer run
+  with sparse map output.
+  
   
 
+
   
-  
-
-
-
 
 
   

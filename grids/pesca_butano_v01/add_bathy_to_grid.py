@@ -7,7 +7,7 @@ from stompy.spatial import field
 
 bathy_dir="../../../bathy"
 # The as-built needs to be generated
-bathy_asbuilt_fn=os.path.join(bathy_dir,'compiled-dem-asbuilt-20201230-1m.tif') 
+bathy_asbuilt_fn=os.path.join(bathy_dir,'compiled-dem-asbuilt-20201230-1m.tif')
 bathy_existing_fn=os.path.join(bathy_dir,'compiled-dem-existing-20201230-1m.tif')
 
 ##
