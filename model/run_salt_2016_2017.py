@@ -29,12 +29,13 @@ class PescaDeeper(pesca_base.PescaButano):
 
 model=PescaDeeper(run_start=np.datetime64("2016-06-10 00:00"),
                   run_stop=np.datetime64("2016-08-14 00:00"),
-                  run_dir="run_salt_20160520-v101",
+                  run_dir="run_salt_20160520-v103",
                   salinity=True,
                   temperature=True,
                   nlayers_3d=28,
                   pch_area=2.0,
-                  z_min=-1.7,
+                  z_max=3.25,
+                  z_min=-0.5,
                   num_procs=16)
 
 model.mdu['time','AutoTimestep']=4 # 5=bad. 4 okay but slower, seems no better than 3.
