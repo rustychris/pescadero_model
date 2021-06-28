@@ -27,9 +27,13 @@ class PescaDeeper(pesca_base.PescaButano):
         ds['z_thalweg'] = ds['z_thalweg'] - 0.15
         return ds
 
+    def update_initial_water_level(self):
+        # stand-in while Sophie updates
+        super(pesca_base.PescaButanoBase,self).update_initial_water_level()
+
 model=PescaDeeper(run_start=np.datetime64("2016-06-10 00:00"),
                   run_stop=np.datetime64("2016-08-14 00:00"),
-                  run_dir="run_salt_20160520-v103",
+                  run_dir="run_salt_20160520-v106",
                   salinity=True,
                   temperature=True,
                   nlayers_3d=28,
@@ -38,7 +42,7 @@ model=PescaDeeper(run_start=np.datetime64("2016-06-10 00:00"),
                   z_min=-0.5,
                   num_procs=16)
 
-model.mdu['time','AutoTimestep']=4 # 5=bad. 4 okay but slower, seems no better than 3.
+# model.mdu['time','AutoTimestep']=2 # 5=bad. 4 okay but slower, seems no better than 2.
 model.mdu['output','MapInterval']=6*3600
 
 model.mdu['numerics','TurbulenceModel']=3 # 0: breaks, 1: constant,  3: k-eps
