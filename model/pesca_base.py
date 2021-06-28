@@ -53,8 +53,9 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
         self.mdu['geometry','BedLevType']=4
         
         self.mdu['output','StatsInterval']=300 # stat output every 5 minutes?
-        self.mdu['output','MapInterval']=6*3600 # 6h.
+        self.mdu['output','MapInterval']=12*3600 # 12h.
         self.mdu['output','RstInterval']=4*86400 # 4days
+        self.mdu['output','HisInterval']=900 # 15 minutes
         self.mdu['output','MapFormat']=4 # ugrid output format 1= older, 4= Ugrid
 
         self.mdu['numerics','MinTimestepBreak']=0.001
@@ -80,6 +81,7 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
         self.set_bcs()
         self.add_monitoring()
         self.add_structures()
+        self.set_friction()
 
         if self.salinity or self.temperature:
             self.mdu['physics','Idensform']=2 # UNESCO
@@ -98,8 +100,8 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
     def set_grid_and_features(self):
         # For now the only difference is the DEM. If they diverge, might go
         # with separate grid directories instead (maybe with some common features)
-        grid_dir="../grids/pesca_butano_v01"
-        self.set_grid(os.path.join(grid_dir, f"pesca_butano_v01_{self.terrain}_bathy.nc"))
+        grid_dir="../grids/pesca_butano_v03"
+        self.set_grid(os.path.join(grid_dir, f"pesca_butano_{self.terrain}_deep_bathy.nc"))
         self.add_gazetteer(os.path.join(grid_dir,"line_features.shp"))
         self.add_gazetteer(os.path.join(grid_dir,"point_features.shp"))
         self.add_gazetteer(os.path.join(grid_dir,"polygon_features.shp"))
@@ -122,7 +124,16 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
         ds=ds.set_coords(['x','y'])
         da=ds['n']
         return da
-        
+
+    def set_friction(self):
+        """
+        Set friction from polygon features.
+        """
+        self.mdu['physics','UnifFrictCoef']=0.055
+        da=self.friction_dataarray()
+        # This will default to the same friction type as UnifFrictType
+        bc=hm.RoughnessBC(data_array=da)
+        self.add_bcs([bc])
 
     def config_layers(self):
         """
@@ -500,7 +511,7 @@ class PescaButano(PescaButanoBase):
             neg_freeweirflowcoeff=1,                   	# Negative free weir flow (-)
             neg_drownweirflowcoeff=1,                   	# Negative drowned weir flow (-)
             neg_contrcoeffreegate=1,                   	# Negative flow contraction coefficient (-)
-            extraresistance=4,                   	# Extra resistance (-)
+            extraresistance=1,                   	# Extra resistance (-)
             GateHeight=10,                   	# Vertical gate door height (m)
             GateOpeningWidth=width,                 	# Horizontal opening width between the doors (m)
             #GateOpeningHorizontalDirection=symmetric,           	# Horizontal direction of the opening doors
