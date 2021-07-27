@@ -388,10 +388,23 @@ run_salt_20160520-v100
   Back to farm, keep that ZBot. Decrease N Marsh friction to 0.015. Back to longer run
   with sparse map output.
   
+run_salt_20160520-v101
+  Decrease dicoww and vicoww. Long run -- 42 days.
+
+run_salt_20160520-v102 (cws)
+  Testing layers in old config
   
+run_salt_20160520-v103 (cws)
+  Testing layers in new config. Bottom layer extra thick, all others
+  concentrated around lagoon depth.
 
-
+run_salt_20160520-v104 (farm)
+  Like 103, but long run on farm.
   
-
-
+run_salt_20160520-v105 (farm)
+  Decrease friction in inlet, longer transect output. Try default
+  timestepping setting, and use default initial waterlevel.
+  
+run_salt_20160520-v106 (farm)
+  Decrease 'extra_resistance' for the mouth structures from 4 to 1.
   
