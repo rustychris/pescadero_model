@@ -58,8 +58,6 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
         self.mdu['output','MapFormat']=4 # ugrid output format 1= older, 4= Ugrid
 
         self.mdu['numerics','MinTimestepBreak']=0.001
-        self.mdu['time','AutoTimestep']=3 # 5=bad. 4 okay but slower, seems no better than 3.
-        self.mdu['time','AutoTimestepNoStruct']=1 # had been 0
         
         self.mdu['physics','UnifFrictCoef']=0.023 # just standard value.
 
@@ -91,15 +89,18 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
             self.mdu['physics','Idensform']=0 # no density effects
         
     def update_initial_water_level(self):
-        # To be updated to pull QCM lagoon water level at self.run_start
-        self.mdu['geometry','WaterLevIni']=2.6 # to overwrite the lagoon waterlevel
+        # Initial WL in the lagoon pulled from QCM calc lagoon WL
+        ds = self.prep_qcm_data()
+        lagoonWL= ds.lagoon_level.sel(time=self.run_start, method="nearest").values
+                
+        self.mdu['geometry','WaterLevIni']=lagoonWL # to overwrite the lagoon waterlevel
         print('overwritting the initial water level to prescribed value')
             
     def set_grid_and_features(self):
         # For now the only difference is the DEM. If they diverge, might go
         # with separate grid directories instead (maybe with some common features)
-        grid_dir="../grids/pesca_butano_v01"
-        self.set_grid(os.path.join(grid_dir, f"pesca_butano_v01_{self.terrain}_bathy.nc"))
+        grid_dir="../grids/pesca_butano_v02"
+        self.set_grid(os.path.join(grid_dir, f"pesca_butano_v03_{self.terrain}_deep_bathy.nc"))
         self.add_gazetteer(os.path.join(grid_dir,"line_features.shp"))
         self.add_gazetteer(os.path.join(grid_dir,"point_features.shp"))
         self.add_gazetteer(os.path.join(grid_dir,"polygon_features.shp"))
@@ -133,7 +134,9 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
         self.mdu['geometry','Kmx']=self.nlayers_3d # number of layers
         self.mdu['geometry','LayerType']=2 # all z layers
         self.mdu['geometry','ZlayBot']=self.z_min
-        self.mdu['geometry','ZlayTop']=self.z_max
+        self.mdu['geometry','ZlayTop']=self.z_max    
+        self.mdu['time','AutoTimestep']=3 # 5=bad. 4 okay but slower, seems no better than 3.
+        self.mdu['time','AutoTimestepNoStruct']=1 # had been 0
         
         # Adjust node elevations to avoid being just below interfaces
         # This may not be necessary.
@@ -178,7 +181,7 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
         
     def set_bcs(self):
         raise Exception("set_bcs() must be overridden in subclass")
-
+        
     def add_monitor_transects(self,features,dx=None):
         """
         Add a sampled transect. dx=None will eventually just pull each
@@ -257,21 +260,14 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
             CrestWidth=0.3, # total guess
         )
 
+    
     def add_mouth_structure(self):
-        """
-        Configure structures (or absence of structures) at the mouth
-        """
-        # Uses two structures:
-        self.add_mouth_in_structure()
-        self.add_mouth_out_structure()
-        
-    def add_mouth_in_structure(self):
         """
         Add flow control structure at mouth, for the inner of two structures.
         """
         self.add_Structure(
             type='gate',
-            name='mouth_in',
+            name='mouth',
             # here the gate is never overtopped
             GateHeight=10.0, # top of door to bottom of door
             GateLowerEdgeLevel=0.2, # elevation of bottom of 'gate'
@@ -280,21 +276,6 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
             # CrestWidth=0.3, # should be the length of the edges
         )
         
-    def add_mouth_out_structure(self):
-        """
-        Add flow control structure at mouth, here just the outer of two 
-        structures.
-        """
-        self.add_Structure(
-            type='gate',
-            name='mouth_out',
-            # here the gate is never overtopped
-            GateHeight=10.0, # top of door to bottom of door
-            GateLowerEdgeLevel=0.2, # elevation of bottom of 'gate'
-            GateOpeningWidth=5.0, # width of opening. 
-            CrestLevel=0.2, # roughly matches bathy.
-            # CrestWidth=0.3, # should be the length of the edges
-        )
 
 class PescaButano(PescaButanoBase):
     """ Add realistic boundary conditions to base Pescadero model
@@ -302,6 +283,12 @@ class PescaButano(PescaButanoBase):
     def set_bcs(self):
         self.set_creek_bcs()
         self.set_mouth_bc()
+        self.set_source_sink()
+        
+    def set_source_sink(self):
+        self.set_seepage()
+        self.set_overtopping()
+        #self.set_evaporation()
 
     def set_mouth_bc(self):
         ocean_bc=self.set_mouth_stage_qcm()
@@ -422,13 +409,31 @@ class PescaButano(PescaButanoBase):
                 ck_temp=hm.ScalarBC(parent=ck,scalar='temperature',value=18)
                 self.add_bcs([ck_temp])
 
+   
+    def set_seepage(self):
+        
+        ds = self.prep_qcm_data()
+        seepage= ds['seepage_abs']       
+        bc_seepage=hm.SourceSinkBC(name='seepage',flow=seepage,dredge_depth=None)
+        self.add_bcs([bc_seepage])
+        print('Setting seepage')
+
+    def set_overtopping(self):
+        
+        ds = self.prep_qcm_data()
+        overtopping= ds['wave_overtop']       
+        bc_overtopping=hm.SourceSinkBC(name='wave_overtop',flow=overtopping,dredge_depth=None)
+        self.add_bcs([bc_overtopping])
+
+
     # time shift for QCM, while we don't have QCM output for
     # the period of the BML data
-    qcm_time_offset=np.timedelta64(0,'s')
-            
-    def add_mouth_in_structure(self):
+    qcm_time_offset=np.timedelta64(0,'s')    
+    
+                
+    def add_mouth_structure(self):
         """
-        Set up the flow control structure for the inner mouth structure
+        Set up the flow control structure for the single mouth structure
         """
         ds = self.prep_qcm_data()
 
@@ -437,7 +442,7 @@ class PescaButano(PescaButanoBase):
 
         self.add_Structure(
             type='generalstructure',
-            name='mouth_in',
+            name='mouth',
             
             Upstream2Width=60,                 	# Width left side of structure (m)
             Upstream1Width=55,                 	# Width structure left side (m)
@@ -466,45 +471,6 @@ class PescaButano(PescaButanoBase):
             #GateOpeningHorizontalDirection=symmetric,           	# Horizontal direction of the opening doors
             )
         
-    def add_mouth_out_structure(self):
-        """
-        Set up flow control structure for the outer mouth structure
-        """
-        ds = self.prep_qcm_data()
-
-        crest= ds['z_thalweg']
-        width= ds['w_inlet']    
-        
-        self.add_Structure(
-            type='generalstructure',
-            name='mouth_out',
-            
-            Upstream2Width=60,                 	# Width left side of structure (m)
-            Upstream1Width=55,                 	# Width structure left side (m)
-            CrestWidth=50,                 	# Width structure centre (m)
-            Downstream1Width=55,                 	# Width structure right side (m)
-            Downstream2Width=60,                 	# Width right side of structure (m)
-            Upstream2Level=1,                   	# Bed level left side of structure (m AD)
-            Upstream1Level=1,                   	# Bed level left side structure (m AD)
-            CrestLevel=crest,	# Bed level at centre of structure (m AD)
-            Downstream1Level=1,                   	# Bed level right side structure (m AD)
-            Downstream2Level=1,                   	# Bed level right side of structure (m AD)
-            GateLowerEdgeLevel=0.2,                  	# Gate lower edge level (m AD)
-            pos_freegateflowcoeff=1,                   	# Positive free gate flow (-)
-            pos_drowngateflowcoeff=1,                   	# Positive drowned gate flow (-)
-            pos_freeweirflowcoeff=1,                   	# Positive free weir flow (-)
-            pos_drownweirflowcoeff=1,                   	# Positive drowned weir flow (-)
-            pos_contrcoeffreegate=1,                   	# Positive flow contraction coefficient (-)
-            neg_freegateflowcoeff=1,                   	# Negative free gate flow (-)
-            neg_drowngateflowcoeff=1,                   	# Negative drowned gate flow (-)
-            neg_freeweirflowcoeff=1,                   	# Negative free weir flow (-)
-            neg_drownweirflowcoeff=1,                   	# Negative drowned weir flow (-)
-            neg_contrcoeffreegate=1,                   	# Negative flow contraction coefficient (-)
-            extraresistance=4,                   	# Extra resistance (-)
-            GateHeight=10,                   	# Vertical gate door height (m)
-            GateOpeningWidth=width,                 	# Horizontal opening width between the doors (m)
-            #GateOpeningHorizontalDirection=symmetric,           	# Horizontal direction of the opening doors
-            )        
 
     ds_qcm=None
     def prep_qcm_data(self):
@@ -528,7 +494,10 @@ class PescaButano(PescaButanoBase):
             ocean_level=qcm['Ocean level (feet NAVD88)']
             qcm['z_ocean']=0.3048 * ocean_modified.combine_first(ocean_level)
             qcm['z_thalweg']=0.3048 * qcm['Modeled Inlet thalweg elevation (feet NAVD88)']
-
+            
+            # lagoon WL, using the qcm modeled WL in the lagoon
+            qcm['lagoon_level'] = qcm['Modeled Lagoon Level (feet NAVD88)'] * 0.3048
+           
             # width
             qcm['w_inlet']=0.3048* qcm['Modeled Inlet Width (feet)'].fillna(0)
             
@@ -549,9 +518,55 @@ class PescaButano(PescaButanoBase):
             qcm['wave_overtop']= qcm['Modeled wave overtopping'] * 0.02831685 # from ft3/s to m3/s
 
             ds=xr.Dataset.from_dataframe(qcm[ 
-                ['time','z_ocean','z_thalweg','w_inlet','seepage_abs','evapotr_mmhour','wave_overtop']]
+                ['time','z_ocean','z_thalweg','lagoon_level','w_inlet','seepage_abs','evapotr_mmhour','wave_overtop']]
                 .set_index('time'))
             self.qcm_ds=ds
             
         return self.qcm_ds
-        
+  
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+# class SourceSinkBC(CommonFlowBC):
+#     # The grid, at the entry point, will be taken down to this elevation
+#     # to ensure that prescribed flows are not prevented due to a dry cell.
+
+#     # Note that only DFM supports LineString here.
+#     geom_type=['Point','LineString']
+#     z='bed' # elevation of the mass source
+#     z_src='bed' # elevation of mass sink, if two-ended
+#     dredge_depth=-1.0
+
+
+
+
+
+
+
+     
+
+# class PescaBase:
+#     def write_forcing(self):
+#         super(PescaBase,self).write_forcing()
+#         # manually add another forcing
+#         with open(self.ext_force_file(),'at') as fp:
+#             # change this to rainfall
+#             txt="""
+# QUANTITY=bedrock_surface_elevation
+# FILENAME=bedrock.tim
+# FILETYPE=1
+# METHOD=1
+# OPERAND=O
+# """
+
