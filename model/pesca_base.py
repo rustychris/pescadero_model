@@ -59,9 +59,7 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
         self.mdu['output','MapFormat']=4 # ugrid output format 1= older, 4= Ugrid
 
         self.mdu['numerics','MinTimestepBreak']=0.001
-        self.mdu['time','AutoTimestep']=3 # 5=bad. 4 okay but slower, seems no better than 3.
-        self.mdu['time','AutoTimestepNoStruct']=1 # had been 0
-        
+
         self.mdu['physics','UnifFrictCoef']=0.023 # just standard value.
 
         if self.salinity:
@@ -188,6 +186,11 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
             # Best not to make this too long.  100 layers with %.4f is too long for the
             # default partitioning script to handle, and this gets truncated.
             self.mdu['geometry','stretchCoef']=" ".join(["%.1f"%frac for frac in fracs])
+
+        # These *might* help in 3D...
+        # On RH laptop they cause 2D runs to fail during startup.
+        self.mdu['time','AutoTimestep']=3 # 5=bad. 4 okay but slower, seems no better than 3.
+        self.mdu['time','AutoTimestepNoStruct']=1 # had been 0
         
     def set_bcs(self):
         raise Exception("set_bcs() must be overridden in subclass")
@@ -564,7 +567,7 @@ class PescaButano(PescaButanoBase):
             ds=xr.Dataset.from_dataframe(qcm[ 
                 ['time','z_ocean','z_thalweg','w_inlet','seepage_abs','evapotr_mmhour','wave_overtop']]
                 .set_index('time'))
-            self.qcm_ds=ds
+            self.ds_qcm=ds 
             
-        return self.qcm_ds
+        return self.ds_qcm
         
