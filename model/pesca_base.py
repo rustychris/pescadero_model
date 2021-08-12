@@ -185,7 +185,9 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
             cumul=np.round(cumul,1)
             fracs=np.diff(cumul)
             # something like 10 10 10 10 10 10 10 10 10 10
-            self.mdu['geometry','stretchCoef']=" ".join(["%.4f"%frac for frac in fracs])
+            # Best not to make this too long.  100 layers with %.4f is too long for the
+            # default partitioning script to handle, and this gets truncated.
+            self.mdu['geometry','stretchCoef']=" ".join(["%.1f"%frac for frac in fracs])
         
     def set_bcs(self):
         raise Exception("set_bcs() must be overridden in subclass")
@@ -455,11 +457,11 @@ class PescaButano(PescaButanoBase):
             CrestWidth=50,                 	    # Width structure centre (m)
             Downstream1Width=55,                 	# Width structure right side (m)
             Downstream2Width=60,                 	# Width right side of structure (m)
-            Upstream2Level=1,                   	# Bed level left side of structure (m AD)
-            Upstream1Level=1,                   	# Bed level left side structure (m AD)
+            Upstream2Level=0.25,                   	# Bed level left side of structure (m AD)
+            Upstream1Level=0.25,                   	# Bed level left side structure (m AD)
             CrestLevel=crest,	                    # Bed level at centre of structure (m AD)
-            Downstream1Level=1,                   	# Bed level right side structure (m AD)
-            Downstream2Level=1,                   	# Bed level right side of structure (m AD)
+            Downstream1Level=0.25,                   	# Bed level right side structure (m AD)
+            Downstream2Level=0.25,                   	# Bed level right side of structure (m AD)
             GateLowerEdgeLevel=0.2,                  	# Gate lower edge level (m AD)
             pos_freegateflowcoeff=1,                   	# Positive free gate flow (-)
             pos_drowngateflowcoeff=1,                   	# Positive drowned gate flow (-)

@@ -26,31 +26,31 @@ class PescaDeeper(pesca_base.PescaButano):
         super(pesca_base.PescaButanoBase,self).update_initial_water_level()
 
 model=PescaDeeper(run_start=np.datetime64("2016-06-10 00:00"),
-                  run_stop=np.datetime64("2016-08-14 00:00"),
-                  run_dir="run_salt_20160520-v107",
+                  run_stop=np.datetime64("2016-06-20 00:00"),
+                  run_dir="run_salt_20160520-v113",
                   salinity=True,
-                  temperature=True,
-                  nlayers_3d=28,
+                  temperature=False,
+                  nlayers_3d=100,
                   pch_area=2.0,
-                  z_max=3.25,
+                  z_max=2.5,
                   z_min=-0.5,
                   num_procs=16)
 
 # model.mdu['time','AutoTimestep']=2 # 5=bad. 4 okay but slower, seems no better than 2.
-model.mdu['output','MapInterval']=6*3600
+model.mdu['output','MapInterval']=12*3600
 
 model.mdu['numerics','TurbulenceModel']=3 # 0: breaks, 1: constant,  3: k-eps
-model.mdu['physics','Dicoww']=1e-7
-model.mdu['physics','Vicoww']=1e-6
+model.mdu['physics','Dicoww']=1e-8
+model.mdu['physics','Vicoww']=1e-7
 
-model.mdu['numerics','Vertadvtypsal']=6
-# model.mdu['numerics','Maxitverticalforestersal']=20
+#model.mdu['numerics','Vertadvtypsal']=4
+#model.mdu['numerics','Maxitverticalforestersal']=20
 model.mdu['numerics','CFLmax']=0.4
-
 
 model.write()
 
 shutil.copyfile(__file__,os.path.join(model.run_dir,"script.py"))
+shutil.copyfile("pesca_base.py",os.path.join(model.run_dir,"pesca_base.py"))
 model.partition()
 model.run_simulation()
 
