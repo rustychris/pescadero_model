@@ -278,32 +278,16 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
         Configure structures (or absence of structures) at the mouth
         """
         # Uses two structures:
-        self.add_mouth_in_structure()
-        self.add_mouth_out_structure()
+        self.add_mouth_gen_structure(name='mouth_in')
+        self.add_mouth_gen_structure(name='mouth_out')
         
-    def add_mouth_in_structure(self):
+    def add_mouth_gen_structure(self,name):
         """
         Add flow control structure at mouth, for the inner of two structures.
         """
         self.add_Structure(
             type='gate',
-            name='mouth_in',
-            # here the gate is never overtopped
-            GateHeight=10.0, # top of door to bottom of door
-            GateLowerEdgeLevel=0.2, # elevation of bottom of 'gate'
-            GateOpeningWidth=5.0, # width of opening. 
-            CrestLevel=0.2, # roughly matches bathy.
-            # CrestWidth=0.3, # should be the length of the edges
-        )
-        
-    def add_mouth_out_structure(self):
-        """
-        Add flow control structure at mouth, here just the outer of two 
-        structures.
-        """
-        self.add_Structure(
-            type='gate',
-            name='mouth_out',
+            name=name,
             # here the gate is never overtopped
             GateHeight=10.0, # top of door to bottom of door
             GateLowerEdgeLevel=0.2, # elevation of bottom of 'gate'
@@ -442,7 +426,7 @@ class PescaButano(PescaButanoBase):
     # the period of the BML data
     qcm_time_offset=np.timedelta64(0,'s')
             
-    def add_mouth_in_structure(self):
+    def add_mouth_gen_structure(self,name):
         """
         Set up the flow control structure for the inner mouth structure
         """
@@ -453,7 +437,7 @@ class PescaButano(PescaButanoBase):
 
         self.add_Structure(
             type='generalstructure',
-            name='mouth_in',
+            name=name,
             
             Upstream2Width=60,                 	# Width left side of structure (m)
             Upstream1Width=55,                 	# Width structure left side (m)
@@ -476,52 +460,12 @@ class PescaButano(PescaButanoBase):
             neg_freeweirflowcoeff=1,                   	# Negative free weir flow (-)
             neg_drownweirflowcoeff=1,                   	# Negative drowned weir flow (-)
             neg_contrcoeffreegate=1,                   	# Negative flow contraction coefficient (-)
-            extraresistance=4,                   	# Extra resistance (-)
+            extraresistance=1,                   	# Extra resistance (-)
             GateHeight=10,                   	# Vertical gate door height (m)
             GateOpeningWidth=width,                 	# Horizontal opening width between the doors (m)
             #GateOpeningHorizontalDirection=symmetric,           	# Horizontal direction of the opening doors
             )
         
-    def add_mouth_out_structure(self):
-        """
-        Set up flow control structure for the outer mouth structure
-        """
-        ds = self.prep_qcm_data()
-
-        crest= ds['z_thalweg']
-        width= ds['w_inlet']    
-        
-        self.add_Structure(
-            type='generalstructure',
-            name='mouth_out',
-            
-            Upstream2Width=60,                 	# Width left side of structure (m)
-            Upstream1Width=55,                 	# Width structure left side (m)
-            CrestWidth=50,                 	# Width structure centre (m)
-            Downstream1Width=55,                 	# Width structure right side (m)
-            Downstream2Width=60,                 	# Width right side of structure (m)
-            Upstream2Level=1,                   	# Bed level left side of structure (m AD)
-            Upstream1Level=1,                   	# Bed level left side structure (m AD)
-            CrestLevel=crest,	# Bed level at centre of structure (m AD)
-            Downstream1Level=1,                   	# Bed level right side structure (m AD)
-            Downstream2Level=1,                   	# Bed level right side of structure (m AD)
-            GateLowerEdgeLevel=0.2,                  	# Gate lower edge level (m AD)
-            pos_freegateflowcoeff=1,                   	# Positive free gate flow (-)
-            pos_drowngateflowcoeff=1,                   	# Positive drowned gate flow (-)
-            pos_freeweirflowcoeff=1,                   	# Positive free weir flow (-)
-            pos_drownweirflowcoeff=1,                   	# Positive drowned weir flow (-)
-            pos_contrcoeffreegate=1,                   	# Positive flow contraction coefficient (-)
-            neg_freegateflowcoeff=1,                   	# Negative free gate flow (-)
-            neg_drowngateflowcoeff=1,                   	# Negative drowned gate flow (-)
-            neg_freeweirflowcoeff=1,                   	# Negative free weir flow (-)
-            neg_drownweirflowcoeff=1,                   	# Negative drowned weir flow (-)
-            neg_contrcoeffreegate=1,                   	# Negative flow contraction coefficient (-)
-            extraresistance=1,                   	# Extra resistance (-)
-            GateHeight=10,                   	# Vertical gate door height (m)
-            GateOpeningWidth=width,                 	# Horizontal opening width between the doors (m)
-            #GateOpeningHorizontalDirection=symmetric,           	# Horizontal direction of the opening doors
-            )        
-
     ds_qcm=None
     def prep_qcm_data(self):
         '''load QCM output and prepare xr dataset'''
