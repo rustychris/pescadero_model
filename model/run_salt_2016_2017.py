@@ -16,15 +16,7 @@ from shapely import ops, geometry
 
 ##
 class PescaDeeper(pesca_base.PescaButano):
-    # has been 3.25.  No better results, but 30% faster or so.
-    # z_max=2.0
-    # def prep_qcm_data(self):
-    #     # Drop the depth of the thalweg 0.15m
-    # 
-    #     # Make a copy, since this is cached on self.
-    #     ds=super(PescaDeeper,self).prep_qcm_data().copy()
-    #     ds['z_thalweg'] = ds['z_thalweg'] - 0.15
-    #     return ds
+    pillars=False
 
     def update_initial_water_level(self):
         # stand-in while Sophie updates
@@ -41,11 +33,12 @@ class PescaDeeper(pesca_base.PescaButano):
 
         # manually added some pillars, and now just one mouth structure
         #self.add_mouth_gen_structure(name='mouth_in')
-        #self.add_pillars()
+        self.add_pillars()
 
     pillar_fn='pillars.pliz'
     def add_pillars(self):
-        self.mdu['geometry','PillarFile'] = self.pillar_fn
+        if self.pillars:
+            self.mdu['geometry','PillarFile'] = self.pillar_fn
     def write_pillars(self):
         pillar_text="""\
 pillars
@@ -65,7 +58,8 @@ pillars
 
     def write_forcing(self):
         super(PescaDeeper,self).write_forcing()
-        #self.write_pillars()
+        if self.pillars:
+            self.write_pillars()
 
     def add_mouth_as_bathy(self,plot=False):
         # Choose geometry from the start of the period:

@@ -18,6 +18,8 @@ from shapely import ops, geometry
 
 ##
 class PescaMouthy(pesca_base.PescaButano):
+    pillars=False
+
     # Note that the salinity runs have been dropping the thalweg by 0.15 cm
     def update_initial_water_level(self):
         # stand-in while Sophie updates
@@ -25,20 +27,24 @@ class PescaMouthy(pesca_base.PescaButano):
 
     def add_mouth_structure(self):
         # Baseline:
-        # super(PescaMouthy,self).add_mouth_structure()
+        super(PescaMouthy,self).add_mouth_structure()
 
         # synthetic DEM instead of structures
         #self.add_mouth_as_bathy()
 
+        # synthetic DEM as structures
+        #self.add_mouth_as_structures()
+
         # Make a sequence of partially open gates?  nah
 
         # manually added some pillars, and now just one mouth structure
-        self.add_mouth_gen_structure(name='mouth_in')
+        #self.add_mouth_gen_structure(name='mouth_in')
         self.add_pillars()
 
     pillar_fn='pillars.pliz'
     def add_pillars(self):
-        self.mdu['geometry','PillarFile'] = self.pillar_fn
+        if self.pillars:
+            self.mdu['geometry','PillarFile'] = self.pillar_fn
     def write_pillars(self):
         pillar_text="""\
 pillars
@@ -58,7 +64,8 @@ pillars
 
     def write_forcing(self):
         super(PescaMouthy,self).write_forcing()
-        self.write_pillars()
+        if self.pillars:
+            self.write_pillars()
 
     def add_mouth_as_bathy(self,plot=False):
         # Choose geometry from the start of the period:
@@ -155,7 +162,7 @@ pillars
     
 model=PescaMouthy(run_start=np.datetime64("2016-06-14 00:00"),
                   run_stop=np.datetime64("2016-06-18 00:00"),
-                  run_dir="data_mouth_v008",
+                  run_dir="data_mouth_v009",
                   salinity=False,
                   temperature=False,
                   nlayers_3d=0,
@@ -190,3 +197,4 @@ model.run_simulation()
 # v006: big pillars. Decent improvement?
 # v007: big pillars, drop the second mouth structure.
 # v008: switch to bedlevel=5 to be consistent with 3D, should be comparable to 3D v114.
+# v009: mimic salt run v116. is 2D still super different?

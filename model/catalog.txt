@@ -442,7 +442,9 @@ run_salt_20160520-v115 (farm)
   Synthetic bed with salinity
 
 run_salt_20160520-v116 (farm)
-  Single structure, increased friction
+  Two structure, increased friction. Thought I dropped a structure but
+  apparently not. Results were good, though.
+  
 
 
 
