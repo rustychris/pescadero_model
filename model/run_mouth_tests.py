@@ -3,6 +3,9 @@ Runs targeting the 2016/2017 period of the BML field data.
 Here focused on 2D runs and how various mouth treatments alter
 the stage results.
 """
+import matplotlib
+matplotlib.use('Agg')
+
 import pesca_base
 import os
 import shutil
@@ -15,6 +18,8 @@ from shapely import ops, geometry
 
 ##
 class PescaMouthy(pesca_base.PescaButano):
+    pillars=False
+
     # Note that the salinity runs have been dropping the thalweg by 0.15 cm
     def update_initial_water_level(self):
         # stand-in while Sophie updates
@@ -22,9 +27,45 @@ class PescaMouthy(pesca_base.PescaButano):
 
     def add_mouth_structure(self):
         # Baseline:
-        # super(PescaMouth,self).add_mouth_structure()
-        # Will add in DEM update here:
-        self.add_mouth_as_bathy()
+        super(PescaMouthy,self).add_mouth_structure()
+
+        # synthetic DEM instead of structures
+        #self.add_mouth_as_bathy()
+
+        # synthetic DEM as structures
+        #self.add_mouth_as_structures()
+
+        # Make a sequence of partially open gates?  nah
+
+        # manually added some pillars, and now just one mouth structure
+        #self.add_mouth_gen_structure(name='mouth_in')
+        self.add_pillars()
+
+    pillar_fn='pillars.pliz'
+    def add_pillars(self):
+        if self.pillars:
+            self.mdu['geometry','PillarFile'] = self.pillar_fn
+    def write_pillars(self):
+        pillar_text="""\
+pillars
+   9  4
+552092 4124623 5 2.5
+552096 4124624 5 2.5
+552099 4124626 5 2.5
+552103 4124628 5 2.5
+552106 4124629 5 2.5
+552109 4124631 5 2.5
+552112 4124632 5 2.5
+552114 4124633 5 2.5
+552118 4124635 5 2.5
+"""
+        with open(os.path.join(self.run_dir,self.pillar_fn),'wt') as fp:
+            fp.write(pillar_text)
+
+    def write_forcing(self):
+        super(PescaMouthy,self).write_forcing()
+        if self.pillars:
+            self.write_pillars()
 
     def add_mouth_as_bathy(self,plot=False):
         # Choose geometry from the start of the period:
@@ -74,19 +115,33 @@ class PescaMouthy(pesca_base.PescaButano):
         self.grid.add_node_field('node_z_bed_orig',self.grid.nodes['node_z_bed'],on_exists='pass')
         
         def channel(n,c_long,c_lat):
-            # rectangular channel, but only make things shallower than
-            # original
             z_orig=self.grid.nodes['node_z_bed_orig'][n]
-            if c_lat<qcm_width/2:
-                return max(z_orig,qcm_z_thalweg)
+            if 0:
+                # rectangular channel, but only make things shallower than
+                # original
+                if c_lat<qcm_width/2:
+                    return max(z_orig,qcm_z_thalweg)
+                else:
+                    return z_orig
             else:
-                return z_orig
+                # linear from 0 at thalweg to 1 at prescribed width
+                frac=(2*c_lat/qcm_width).clip(0,1.0)
+                # V-shaped channel with 0.2m of relief, center is 0.1
+                # deeper than qcm, edge 0.1 m shallower.
+                return max(z_orig,qcm_z_thalweg + frac*0.2 - 0.1)
 
         for n,c_long,c_lat in zip(node_sel,node_long,node_lat):
             self.grid.nodes['node_z_bed'][n]=channel(n,c_long,c_lat)
 
+        # stats on the difference:
+        n_below=np.sum( self.grid.nodes['node_z_bed']<self.grid.nodes['node_z_bed_orig'])
+        n_above=np.sum( self.grid.nodes['node_z_bed']>self.grid.nodes['node_z_bed_orig'])
+        n_equal=np.sum( self.grid.nodes['node_z_bed']==self.grid.nodes['node_z_bed_orig'])
+        # print(f"{n_below} nodes were lowered, {n_above} nodes were raised, {n_equal} nodes stayed the same")
+        
         if plot: 
-            plt.figure(1).clf()
+            fig=plt.figure(1)
+            fig.clf()
             self.grid.plot_edges(color='k',lw=0.4)
             self.grid.plot_nodes(mask=node_sel)
 
@@ -102,16 +157,16 @@ class PescaMouthy(pesca_base.PescaButano):
             plt.axis('equal')
             plt.axis('off')
             plt.axis((552070., 552178., 4124574., 4124708.))
+            fig.savefig('mouth_bathy.png',dpi=150)
 
     
 model=PescaMouthy(run_start=np.datetime64("2016-06-14 00:00"),
                   run_stop=np.datetime64("2016-06-18 00:00"),
-                  run_dir="run_mouth_v001",
+                  run_dir="data_mouth_v009",
                   salinity=False,
                   temperature=False,
                   nlayers_3d=0,
-                  pch_area=2.0,
-                  num_procs=4)
+                  pch_area=2.0)
 
 
 ## 
@@ -134,3 +189,12 @@ model.run_simulation()
 # Now running okay.
 # Not *super* fast, though.  Maybe 1h for the whole thing?
 
+# v001: flat synthetic bed in there...
+# v002: oops, only adjusted levels for one of the mouth structures.  this remedies it
+# v003: linear channel profile
+# v004: change extra resistance from 4 to 1
+# v005: manually add pillars.  too small, little change
+# v006: big pillars. Decent improvement?
+# v007: big pillars, drop the second mouth structure.
+# v008: switch to bedlevel=5 to be consistent with 3D, should be comparable to 3D v114.
+# v009: mimic salt run v116. is 2D still super different?
