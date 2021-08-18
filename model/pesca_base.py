@@ -459,7 +459,7 @@ class PescaButano(PescaButanoBase):
             neg_freeweirflowcoeff=1,                   	# Negative free weir flow (-)
             neg_drownweirflowcoeff=1,                   	# Negative drowned weir flow (-)
             neg_contrcoeffreegate=1,                   	# Negative flow contraction coefficient (-)
-            extraresistance=1,                   	# Extra resistance (-)
+            extraresistance=10,                   	# Extra resistance (-)
             GateHeight=10,                   	# Vertical gate door height (m)
             GateOpeningWidth=width,                 	# Horizontal opening width between the doors (m)
             #GateOpeningHorizontalDirection=symmetric,           	# Horizontal direction of the opening doors

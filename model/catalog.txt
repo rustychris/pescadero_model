@@ -435,6 +435,16 @@ run_salt_20160520-v113 (farm)
   Same structures, but bring in the change to {up,down}{1,2}streamlevel,
   set them all to 0.25, from 1.0.
 
+run_salt_20160520-v114 (farm)
+  Drop one structure, include frictional pillars.
+
+run_salt_20160520-v115 (farm)
+  Synthetic bed with salinity
+
+run_salt_20160520-v116 (farm)
+  Single structure, increased friction
+
+
 
 
   
