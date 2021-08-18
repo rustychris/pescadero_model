@@ -49,8 +49,11 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
         self.mdu['physics','Dicouv']=0.0
 
         # Initial bedlevtype was 3: at nodes, face levels mean of node values
-        # Try 4: at nodes, face levels min. of node values
-        self.mdu['geometry','BedLevType']=4
+        # then 4, at nodes, face levels min. of node values
+        # That led to salt mass being introduced erroneously
+        # 6 avoided the salt issues, but was not as stable
+        # 5 is a good tradeoff, and also allows the bed adjustment above to be simple
+        self.mdu['geometry','BedLevType']=5
         
         self.mdu['output','StatsInterval']=300 # stat output every 5 minutes?
         self.mdu['output','MapInterval']=12*3600 # 12h.
@@ -168,10 +171,6 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
         adjust=np.where((dz_bed>0)&(dz_bed<thresh),
                         thresh-dz_bed, 0)
         self.grid.nodes['node_z_bed']-=adjust
-
-        # originally 4. 6 is good for avoid scalar issues, but not for stability
-        # 5 is good, and also allows the bed adjustment above to be simple
-        self.mdu['geometry','BedlevType']= 5
 
         if write_stretch:
             # Based on this post:

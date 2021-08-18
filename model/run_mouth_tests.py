@@ -155,7 +155,7 @@ pillars
     
 model=PescaMouthy(run_start=np.datetime64("2016-06-14 00:00"),
                   run_stop=np.datetime64("2016-06-18 00:00"),
-                  run_dir="data_mouth_v007",
+                  run_dir="data_mouth_v008",
                   salinity=False,
                   temperature=False,
                   nlayers_3d=0,
@@ -189,3 +189,4 @@ model.run_simulation()
 # v005: manually add pillars.  too small, little change
 # v006: big pillars. Decent improvement?
 # v007: big pillars, drop the second mouth structure.
+# v008: switch to bedlevel=5 to be consistent with 3D, should be comparable to 3D v114.
