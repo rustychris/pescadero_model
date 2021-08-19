@@ -27,7 +27,7 @@ class PescaMouthy(pesca_base.PescaButano):
 
     def add_mouth_structure(self):
         # Baseline:
-        super(PescaMouthy,self).add_mouth_structure()
+        # super(PescaMouthy,self).add_mouth_structure()
 
         # synthetic DEM instead of structures
         #self.add_mouth_as_bathy()
@@ -172,7 +172,7 @@ pillars
         node_idxs,node_x,node_y = self.centerline_to_node_coordinates(center,max_width=50.)
 
         # Find edges between two selected nodes
-        node_mask=np.zeros(g.Nnodes(), np.bool8)
+        node_mask=np.zeros(self.grid.Nnodes(), np.bool8)
         node_mask[node_idxs]=True
         edge_mask=np.nonzero( np.all(node_mask[self.grid.edges['nodes']],axis=1) )[0]
 
