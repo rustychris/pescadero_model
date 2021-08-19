@@ -6,6 +6,7 @@ the stage results.
 import matplotlib
 #matplotlib.use('Agg')
 
+import matplotlib.pyplot as plt
 import pesca_base
 import os
 import shutil
@@ -14,7 +15,18 @@ from stompy.model import hydro_model
 from stompy.model.delft import dflow_model
 from stompy import utils
 from stompy.grid import unstructured_grid
+import stompy.plot.cmap as scmap
+turbo=scmap.load_gradient('turbo.cpt')
+from stompy.plot import plot_wkb
 from shapely import ops, geometry
+import re
+
+import six
+six.moves.reload_module(unstructured_grid)
+six.moves.reload_module(hydro_model)
+six.moves.reload_module(dflow_model)
+six.moves.reload_module(pesca_base)
+
 
 ##
 class PescaMouthy(pesca_base.PescaButano):
@@ -169,70 +181,88 @@ pillars
         # Choose geometry from the start of the period:
         center=self.match_gazetteer(name='mouth_centerline')[0]['geom']
 
-        node_idxs,node_x,node_y = self.centerline_to_node_coordinates(center,max_width=50.)
+        # # Original code tried suss out the edges:
+        # node_idxs,node_x,node_y = self.centerline_to_node_coordinates(center,max_width=50.)
+        # 
+        # # Find edges between two selected nodes
+        # node_mask=np.zeros(g.Nnodes(), np.bool8)
+        # node_mask[node_idxs]=True
+        # edge_mask=np.nonzero( np.all(node_mask[self.grid.edges['nodes']],axis=1) )[0]
+        # 
+        # # Further refine to edges that are perpendicular-ish to the
+        # # centerline.  Gets a bit funky. Get the angle for selected edges
+        # # in the grid coordinate system. For each selected node, get the
+        # # angle of the centerline at the closest point. Average the node
+        # # angles for the edges, then difference the edge and node-mean angles.
+        # 
+        # # angle of edges in world coordinates
+        # j_dxy=( self.grid.nodes['x'][self.grid.edges['nodes'][edge_mask,1]]
+        #         -self.grid.nodes['x'][self.grid.edges['nodes'][edge_mask,0]] )
+        # j_theta=np.arctan2(j_dxy[:,1],j_dxy[:,0])
+        # 
+        # # Nodes for edges, indexing just within for the selected nodes
+        # j_nodes=np.searchsorted(node_idxs,self.grid.edges['nodes'][edge_mask])
+        # 
+        # eps=0.5
+        # n_dxy=np.array([ ( np.array(center.interpolate(x+eps))
+        #                    - np.array(center.interpolate(x-eps)))
+        #                  for x in node_x ] )
+        # # Average n_dxy per edge. NB: average the components here, not
+        # # the angles after arctan2.
+        # jc_dxy=n_dxy[ j_nodes ].mean(axis=1) # axis correct?
+        # jc_theta=np.arctan2(jc_dxy[:,1],jc_dxy[:,0])
+        # 
+        # j_angle=j_theta-jc_theta
+        # 
+        # # Map to [-pi/2,pi/2], then absolute value
+        # # => doesn't matter if edge 'points' upstream or downstream
+        # #    and 'pointing' to river right is the same to us as river left.
+        # j_angle=np.abs( (j_angle + np.pi/2)%np.pi - np.pi/2 )
+        # 
+        # # Narrow to only the perpendicular edges
+        # sel=j_angle>np.pi/4
+        # j_nodes=j_nodes[sel]
+        # edge_mask=edge_mask[sel]
+        # j_angle=j_angle[sel]
+        # 
+        # # Very close, but DFM complained about duplicate structures on
+        # # flowlinks. And where
+        # 
+        # # Average the coordinate while we're at it
+        # j_ll=np.c_[node_x[j_nodes].mean(axis=1),
+        #            node_y[j_nodes].mean(axis=1)]
 
-        # Find edges between two selected nodes
-        node_mask=np.zeros(self.grid.Nnodes(), np.bool8)
-        node_mask[node_idxs]=True
-        edge_mask=np.nonzero( np.all(node_mask[self.grid.edges['nodes']],axis=1) )[0]
+        # Now just pull from shapefile:
+        mstructs=self.match_gazetteer(type='multistructure',name=re.compile('mmouth.*'))
 
-        # Further refine to edges that are perpendicular-ish to the
-        # centerline.  Gets a bit funky. Get the angle for selected edges
-        # in the grid coordinate system. For each selected node, get the
-        # angle of the centerline at the closest point. Average the node
-        # angles for the edges, then difference the edge and node-mean angles.
+        edge_mask=[] # list of indexes, not really a 'mask'
+        for mstruct in mstructs:
+            edge_mask.extend( self.grid.select_edges_by_polyline(mstruct['geom'],boundary=False) )
+        edge_mask=np.unique(edge_mask)
 
-        # angle of edges in world coordinates
-        j_dxy=( self.grid.nodes['x'][self.grid.edges['nodes'][edge_mask,1]]
-                -self.grid.nodes['x'][self.grid.edges['nodes'][edge_mask,0]] )
-        j_theta=np.arctan2(j_dxy[:,1],j_dxy[:,0])
+        j_xy=self.grid.edges_center()[edge_mask]
 
-        # Nodes for edges, indexing just within for the selected nodes
-        j_nodes=np.searchsorted(node_idxs,self.grid.edges['nodes'][edge_mask])
-
-        eps=0.5
-        n_dxy=np.array([ ( np.array(center.interpolate(x+eps))
-                           - np.array(center.interpolate(x-eps)))
-                         for x in node_x ] )
-        # Average n_dxy per edge. NB: average the components here, not
-        # the angles after arctan2.
-        jc_dxy=n_dxy[ j_nodes ].mean(axis=1) # axis correct?
-        jc_theta=np.arctan2(jc_dxy[:,1],jc_dxy[:,0])
-
-        j_angle=j_theta-jc_theta
-
-        # Map to [-pi/2,pi/2], then absolute value
-        # => doesn't matter if edge 'points' upstream or downstream
-        #    and 'pointing' to river right is the same to us as river left.
-        j_angle=np.abs( (j_angle + np.pi/2)%np.pi - np.pi/2 )
-
-        # Narrow to only the perpendicular edges
-        sel=j_angle>np.pi/4
-        j_nodes=j_nodes[sel]
-        edge_mask=edge_mask[sel]
-        j_angle=j_angle[sel]
-
-        # Average the coordinate while we're at it
-        j_xy=np.c_[node_x[j_nodes].mean(axis=1),
-                   node_y[j_nodes].mean(axis=1)]
-
+        # Get the streamwise/cross coordinates
+        j_ll=np.zeros( (len(edge_mask),2), np.float64)
+        for i,xy in enumerate(j_xy):
+            pnt=geometry.Point(xy)
+            j_ll[i,0]=center.project(pnt)
+            j_ll[i,1]=pnt.distance(center.interpolate(j_ll[i,0]))
+        
         # Edges intersected by the centerline get exactly y=0
         # to help make sure there is always conveyance
         is_thalweg=self.grid.select_edges_intersecting(center,mask=edge_mask)
         j_thalweg=is_thalweg[edge_mask]
-        j_xy[j_thalweg,1]=0.0
+        j_ll[j_thalweg,1]=0.0
 
         if plot: 
             fig=plt.figure(1)
             fig.clf()
             self.grid.plot_edges(color='0.5',lw=0.4)
-            #self.grid.plot_edges(values=j_angle,mask=edge_mask,cmap='coolwarm',lw=2.,clim=[0,np.pi/2])
-            #self.grid.plot_edges(values=j_xy[:,0],mask=edge_mask,cmap=turbo,lw=2.)
-            self.grid.plot_edges(values=j_xy[:,1],mask=edge_mask,cmap=turbo,lw=2.,clim=[0,10])
+            #self.grid.plot_edges(values=j_ll[:,0],mask=edge_mask,cmap=turbo,lw=2.)
+            self.grid.plot_edges(values=j_ll[:,1],mask=edge_mask,cmap=turbo,lw=2.,clim=[0,30])
 
             plot_wkb.plot_wkb(center,color='orange')
-
-            #self.grid.contourf_node_values(self.grid.nodes['node_z_bed'],np.linspace(0,2.5,30),cmap=turbo)
 
             plt.axis('tight')
             plt.axis('equal')
@@ -248,10 +278,10 @@ pillars
         qcm_width=ds.w_inlet
         qcm_z_thalweg=ds.z_thalweg
 
-        for idx,(j,xy) in enumerate(zip(edge_mask,j_xy)):
+        for idx,(j,ll) in enumerate(zip(edge_mask,j_ll)):
             # Try a v-shaped channel, slope set by qcm width and
             # a presumed 1m edge-of-channel relief
-            crest=qcm_z_thalweg + 1.0*(xy[1])/(qcm_width/2)
+            crest=qcm_z_thalweg + 1.0*(ll[1])/(qcm_width/2)
             self.add_Structure(
                 type='generalstructure',
                 geom=self.grid.nodes['x'][self.grid.edges['nodes'][j]],
@@ -272,6 +302,7 @@ model=PescaMouthy(run_start=np.datetime64("2016-06-14 00:00"),
 model.mdu['output','MapInterval']=1800
 #model.mdu['numerics','CFLmax']=0.4
 
+## 
 model.write()
 
 shutil.copyfile(__file__,os.path.join(model.run_dir,"script.py"))
@@ -298,3 +329,6 @@ model.run_simulation()
 # v008: switch to bedlevel=5 to be consistent with 3D, should be comparable to 3D v114.
 # v009: mimic salt run v116. is 2D still super different?
 # v010: wacky structures
+
+# ** WARNING: Flowlink 96850 found in structure 137 already claimed by structure 138.
+# That's mouth structure 137-4, 138-4
