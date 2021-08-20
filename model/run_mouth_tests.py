@@ -39,7 +39,7 @@ class PescaMouthy(pesca_base.PescaButano):
 
     def add_mouth_structure(self):
         # Baseline:
-        super(PescaMouthy,self).add_mouth_structure()
+        # super(PescaMouthy,self).add_mouth_structure()
 
         # synthetic DEM instead of structures
         #self.add_mouth_as_bathy()
@@ -181,57 +181,6 @@ pillars
         # Choose geometry from the start of the period:
         center=self.match_gazetteer(name='mouth_centerline')[0]['geom']
 
-        # # Original code tried suss out the edges:
-        # node_idxs,node_x,node_y = self.centerline_to_node_coordinates(center,max_width=50.)
-        # 
-        # # Find edges between two selected nodes
-        # node_mask=np.zeros(g.Nnodes(), np.bool8)
-        # node_mask[node_idxs]=True
-        # edge_mask=np.nonzero( np.all(node_mask[self.grid.edges['nodes']],axis=1) )[0]
-        # 
-        # # Further refine to edges that are perpendicular-ish to the
-        # # centerline.  Gets a bit funky. Get the angle for selected edges
-        # # in the grid coordinate system. For each selected node, get the
-        # # angle of the centerline at the closest point. Average the node
-        # # angles for the edges, then difference the edge and node-mean angles.
-        # 
-        # # angle of edges in world coordinates
-        # j_dxy=( self.grid.nodes['x'][self.grid.edges['nodes'][edge_mask,1]]
-        #         -self.grid.nodes['x'][self.grid.edges['nodes'][edge_mask,0]] )
-        # j_theta=np.arctan2(j_dxy[:,1],j_dxy[:,0])
-        # 
-        # # Nodes for edges, indexing just within for the selected nodes
-        # j_nodes=np.searchsorted(node_idxs,self.grid.edges['nodes'][edge_mask])
-        # 
-        # eps=0.5
-        # n_dxy=np.array([ ( np.array(center.interpolate(x+eps))
-        #                    - np.array(center.interpolate(x-eps)))
-        #                  for x in node_x ] )
-        # # Average n_dxy per edge. NB: average the components here, not
-        # # the angles after arctan2.
-        # jc_dxy=n_dxy[ j_nodes ].mean(axis=1) # axis correct?
-        # jc_theta=np.arctan2(jc_dxy[:,1],jc_dxy[:,0])
-        # 
-        # j_angle=j_theta-jc_theta
-        # 
-        # # Map to [-pi/2,pi/2], then absolute value
-        # # => doesn't matter if edge 'points' upstream or downstream
-        # #    and 'pointing' to river right is the same to us as river left.
-        # j_angle=np.abs( (j_angle + np.pi/2)%np.pi - np.pi/2 )
-        # 
-        # # Narrow to only the perpendicular edges
-        # sel=j_angle>np.pi/4
-        # j_nodes=j_nodes[sel]
-        # edge_mask=edge_mask[sel]
-        # j_angle=j_angle[sel]
-        # 
-        # # Very close, but DFM complained about duplicate structures on
-        # # flowlinks. And where
-        # 
-        # # Average the coordinate while we're at it
-        # j_ll=np.c_[node_x[j_nodes].mean(axis=1),
-        #            node_y[j_nodes].mean(axis=1)]
-
         # Now just pull from shapefile:
         mstructs=self.match_gazetteer(type='multistructure',name=re.compile('mmouth.*'))
 
@@ -281,19 +230,28 @@ pillars
         for idx,(j,ll) in enumerate(zip(edge_mask,j_ll)):
             # Try a v-shaped channel, slope set by qcm width and
             # a presumed 1m edge-of-channel relief
-            crest=qcm_z_thalweg + 1.0*(ll[1])/(qcm_width/2)
+
+            # This was still too frictional
+            # crest=qcm_z_thalweg + 1.0*(ll[1])/(qcm_width/2)
+
+            # Try something more like a trapezoidal channel
+            l_flat=7 # half-width of the flat bottom
+            z_scale=1.0
+            z_offset=-0.10
+            crest=qcm_z_thalweg + z_offset + z_scale*max(0,(ll[1]-l_flat))/(qcm_width/2)
+            
             self.add_Structure(
                 type='generalstructure',
                 geom=self.grid.nodes['x'][self.grid.edges['nodes'][j]],
                 name='mouth_%04d'%idx,
                 CrestLevel=crest,	# Bed level at centre of structure (m AD)
-                extraresistance=1,                   	# Extra resistance (-)
+                extraresistance=0,                   	# Extra resistance (-)
                 GateOpeningWidth=100.0,                 	# Horizontal opening width between the doors (m)
             )        
             
 model=PescaMouthy(run_start=np.datetime64("2016-06-14 00:00"),
                   run_stop=np.datetime64("2016-06-18 00:00"),
-                  run_dir="data_mouth_v010",
+                  run_dir="data_mouth_v013",
                   salinity=False,
                   temperature=False,
                   nlayers_3d=0,
@@ -329,21 +287,7 @@ model.run_simulation()
 # v008: switch to bedlevel=5 to be consistent with 3D, should be comparable to 3D v114.
 # v009: mimic salt run v116. is 2D still super different?
 # v010: wacky structures
+# v011: wacky structures, no extraresistance
+# v012: wacky structures, trapezoidish
+# v013: slightly narrower channel, offset down
 
-# ** WARNING: Flowlink 96850 found in structure 137 already claimed by structure 138.
-# That's mouth structure 137-4, 138-4
-
-## 
-ax=plt.gca()
-
-segs=np.array( [
-[# 0133
-    [552080.5150058008,  4124647.0933370013],
-    [552086.2482158688,  4124652.569105206],
-],
-[# 0134
-    [552080.5150058008,  4124647.0933370013],
-    [552086.9030478017,  4124648.3165008854],
-]])
-from matplotlib.collections import LineCollection
-ax.add_collection( LineCollection(segs,color='m',lw=2.5))
