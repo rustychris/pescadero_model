@@ -408,3 +408,50 @@ run_salt_20160520-v105 (farm)
 run_salt_20160520-v106 (farm)
   Decrease 'extra_resistance' for the mouth structures from 4 to 1.
   
+run_salt_20160520-v107 (farm)
+  Revert the 'extra_resistance', and dial down eddy visco/diffusivity
+  by another 10.  Shorter run.
+
+run_salt_20160520-v108 (farm)
+  Add that forester business back in. With no real improvement.
+
+run_salt_20160520-v109 (farm)
+  Bump up layers to 50, and some more vertical compression.
+  That got more strat
+  
+run_salt_20160520-v110 (farm)
+  Remembered that the reservoir example that Ed mentioned (that Herman
+  favors?) used a centered scheme (2 or 4?) and the forester.  Will try
+  that again, same vertical setup as v109.
+  
+run_salt_20160520-v111 (farm)
+  Drop the centered scheme, and bump layers up to 100. Actually seems
+  that I did *not* change the scheme, just changed the number of layers.
+  
+run_salt_20160520-v112 (farm)
+  Try that again but changing the scheme.
+
+run_salt_20160520-v113 (farm)
+  Same structures, but bring in the change to {up,down}{1,2}streamlevel,
+  set them all to 0.25, from 1.0.
+
+run_salt_20160520-v114 (farm)
+  Drop one structure, include frictional pillars.
+
+run_salt_20160520-v115 (farm)
+  Synthetic bed with salinity
+
+run_salt_20160520-v116 (farm)
+  Two structure, increased friction. Thought I dropped a structure but
+  apparently not. Results were good, though.
+  
+
+
+
+
+  
+
+
+
+  
+
