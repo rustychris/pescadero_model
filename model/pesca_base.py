@@ -23,6 +23,9 @@ cache_dir=os.path.join(here,'cache')
 if not os.path.exists(cache_dir):
     os.makedirs(cache_dir)
 
+
+ft_to_m=0.3048
+
 class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
     """
     Base model domain, including flow structures in default 
@@ -96,8 +99,12 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
         
     def update_initial_water_level(self):
         # To be updated to pull QCM lagoon water level at self.run_start
-        self.mdu['geometry','WaterLevIni']=2.6 # to overwrite the lagoon waterlevel
-        print('overwritting the initial water level to prescribed value')
+        # self.mdu['geometry','WaterLevIni']=2.6 # to overwrite the lagoon waterlevel
+        ds=self.prep_qcm_data()
+        tidx=np.searchsorted(ds.time,self.run_start)
+        z_init=ds['z_lagoon'].values[tidx]
+        self.mdu['geometry','WaterLevIni']=z_init
+        self.log.info('Overwriting the initial water level to %.3f'%z_init)
             
     def set_grid_and_features(self):
         # For now the only difference is the DEM. If they diverge, might go
@@ -213,7 +220,6 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
             self.add_monitor_points(pnts_and_names)
 
     def add_monitoring(self):
-        print("Call to add_monitoring")
         self.add_monitor_points(self.match_gazetteer(geom_type='Point',type='monitor'))
         # Bad choice of naming. features labeled 'transect' are for cross-sections.
         # Features labeled 'section' are for sampled transects
@@ -667,11 +673,16 @@ class PescaButano(PescaButanoBase):
             ocean_modified=qcm['Modified Ocean Level (feet NAVD88)']
             # Otherwise the observed data.
             ocean_level=qcm['Ocean level (feet NAVD88)']
-            qcm['z_ocean']=0.3048 * ocean_modified.combine_first(ocean_level)
-            qcm['z_thalweg']=0.3048 * qcm['Modeled Inlet thalweg elevation (feet NAVD88)']
+            qcm['z_ocean']=ft_to_m * ocean_modified.combine_first(ocean_level)
+            
+            qcm['z_thalweg']=ft_to_m * qcm['Modeled Inlet thalweg elevation (feet NAVD88)']
+            qcm['z_thalweg']=np.where( np.isfinite(qcm.z_thalweg),
+                                       qcm.z_thalweg, 5.0)
+                          
+            qcm['z_lagoon']=ft_to_m*qcm['Modeled Lagoon Level (feet NAVD88)']
 
             # width
-            qcm['w_inlet']=0.3048* qcm['Modeled Inlet Width (feet)'].fillna(0)
+            qcm['w_inlet']=ft_to_m* qcm['Modeled Inlet Width (feet)'].fillna(0)
             
             # Other Sources and Sinks: convert form ft3/s to m3/s
             qcm['seepage']= qcm['Modeled seepage'] * 0.02831685 # from ft3/s to m3/s
@@ -690,7 +701,8 @@ class PescaButano(PescaButanoBase):
             qcm['wave_overtop']= qcm['Modeled wave overtopping'] * 0.02831685 # from ft3/s to m3/s
 
             ds=xr.Dataset.from_dataframe(qcm[ 
-                ['time','z_ocean','z_thalweg','w_inlet','seepage_abs','evapotr_mmhour','wave_overtop']]
+                ['time','z_ocean','z_thalweg','w_inlet','seepage_abs','evapotr_mmhour','wave_overtop',
+                 'z_lagoon']]
                 .set_index('time'))
             self.ds_qcm=ds 
             

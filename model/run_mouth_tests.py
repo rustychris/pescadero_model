@@ -30,39 +30,36 @@ six.moves.reload_module(pesca_base)
 
 ##
 class PescaMouthy(pesca_base.PescaButano):
-    pillars=False
-
     # Note that the salinity runs have been dropping the thalweg by 0.15 cm
-    def update_initial_water_level(self):
-        # stand-in while Sophie updates
-        super(pesca_base.PescaButanoBase,self).update_initial_water_level()
-
     def add_mouth_structure(self):
         # Baseline:
-        # super(PescaMouthy,self).add_mouth_structure()
+        super(PescaMouthy,self).add_mouth_structure()
 
         # synthetic DEM instead of structures
         #self.add_mouth_as_bathy()
 
         # synthetic DEM as structures
-        self.add_mouth_as_structures()
+        # self.add_mouth_as_structures()
 
         # Make a sequence of partially open gates?  nah
 
         # now just one mouth structure
         #self.add_mouth_gen_structure(name='mouth_in')
-        self.add_pillars()
 
 model=PescaMouthy(run_start=np.datetime64("2016-06-14 00:00"),
-                  run_stop=np.datetime64("2016-06-18 00:00"),
-                  run_dir="data_mouth_v013",
+                  run_stop=np.datetime64("2016-06-23 00:00"),
+                  #run_start=np.datetime64("2016-12-10 00:00"),
+                  #run_stop=np.datetime64("2016-12-20 00:00"),
+                  run_dir="data_mouth_v015",
                   salinity=False,
                   temperature=False,
                   nlayers_3d=0,
                   pch_area=2.0)
 
 model.mdu['output','MapInterval']=1800
-#model.mdu['numerics','CFLmax']=0.4
+# model.mdu['time','DtUser']=30.
+# model.mdu['numerics','CFLmax']=0.4
+# model.mdu['time','AutoTimestepNoStruct']=1
 
 ## 
 model.write()
@@ -94,4 +91,10 @@ model.run_simulation()
 # v011: wacky structures, no extraresistance
 # v012: wacky structures, trapezoidish
 # v013: slightly narrower channel, offset down
+# v014: shift the start/stop a bit later to test for spinup effects
+# v015: back to v013 period, a bit longer, and use new bathy 20210820
+# v016: winter breach period with mouth_as_structures. Fails during the breach 
+# v017: winter breach, back to two structures with resistance (like salt v116)
+# v018: longer period like v015, but with the mouth structures.
+#     appears to be identical to v015.
 
