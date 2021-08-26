@@ -24,7 +24,11 @@ class PescaHighFlow(pesca_base.PescaButano):
     the datasets used for the 2016/2017 runs
     """
     def set_mouth_bc(self):
-        self.set_mouth_stage_noaa()
+        self.log.warning("Have to disable Hsig adjustment FIX")
+        self.set_mouth_stage_noaa(hsig_adjustment=False)
+    def update_initial_water_level(self):
+        self.log.warning("QCM doesn't cover initial condition, fall back to BC")
+        super(PescaButanoBase,self).update_initial_water_level()
 
     def prep_qcm_data(self):
         # Add later data for a static, open mouth
