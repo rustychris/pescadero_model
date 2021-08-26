@@ -216,7 +216,6 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
         # Sample each cell intersecting the given feature
         assert dx is not None,"Not ready for adaptive transect resolution"
         for feat in features:
-            print(feat)
             pnts=np.array(feat['geom'])
             pnts=linestring_utils.resample_linearring(pnts,dx,closed_ring=False)
             self.log.info("Resampling leads to %d points for %s"%(len(pnts),feat['name']))
@@ -541,7 +540,7 @@ class PescaButano(PescaButanoBase):
         da=xr.DataArray(qcm_wl_interp,dims=['time'],coords=dict(time=t_new))
         return da
         
-    def set_mouth_stage_noaa(self):
+    def set_mouth_stage_noaa(self,hsig_adjustment=True):
         """
         Drive water level at the mouth from the NOAA gauge
         at Monterey and an empirical offset accounting for
@@ -575,9 +574,14 @@ class PescaButano(PescaButanoBase):
             offset=filters.lowpass_fir(offset,winsize=7*24,window='boxcar')
             return da+offset
 
+        if hsig_adjustment:
+            filters=[hm.Transform(fn_da=Hsig_adjustment),
+                     hm.Lowpass(cutoff_hours=2.5)]
+        else:
+            filters=[hm.Lowpass(cutoff_hours=2.5)]
+
         ocean_bc=hm.NOAAStageBC(name='ocean_bc',station=9413450,
-                                filters=[hm.Transform(fn_da=Hsig_adjustment),
-                                          hm.Lowpass(cutoff_hours=2.5)],
+                                filters=filters,
                                 cache_dir=cache_dir)
         self.add_bcs(ocean_bc)
         return ocean_bc
