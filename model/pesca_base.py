@@ -98,13 +98,19 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
             self.mdu['physics','Idensform']=0 # no density effects
         
     def update_initial_water_level(self):
-        # To be updated to pull QCM lagoon water level at self.run_start
-        # self.mdu['geometry','WaterLevIni']=2.6 # to overwrite the lagoon waterlevel
+        """
+        Set initial water level to qcm lagoon data, unless
+        outside qcm coverage in which case use the BC.
+        """
         ds=self.prep_qcm_data()
-        tidx=np.searchsorted(ds.time,self.run_start)
-        z_init=ds['z_lagoon'].values[tidx]
-        self.mdu['geometry','WaterLevIni']=z_init
-        self.log.info('Overwriting the initial water level to %.3f'%z_init)
+        if self.run_start>ds.time.min() and self.run_start<ds.time.max():
+            tidx=np.searchsorted(ds.time,self.run_start)
+            z_init=ds['z_lagoon'].values[tidx]
+            self.mdu['geometry','WaterLevIni']=z_init
+            self.log.info('Overwriting the initial water level to %.3f'%z_init)
+        else:
+            self.log.warning("QCM doesn't cover initial condition, fall back to BC")
+            super(PescaButanoBase,self).update_initial_water_level()
             
     def set_grid_and_features(self):
         # For now the only difference is the DEM. If they diverge, might go

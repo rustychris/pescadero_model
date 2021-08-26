@@ -46,11 +46,13 @@ class PescaMouthy(pesca_base.PescaButano):
         # now just one mouth structure
         #self.add_mouth_gen_structure(name='mouth_in')
 
-model=PescaMouthy(run_start=np.datetime64("2016-06-14 00:00"),
-                  run_stop=np.datetime64("2016-06-23 00:00"),
+model=PescaMouthy(#run_start=np.datetime64("2016-06-14 00:00"),
+                  #run_stop=np.datetime64("2016-06-23 00:00"),
                   #run_start=np.datetime64("2016-12-10 00:00"),
                   #run_stop=np.datetime64("2016-12-20 00:00"),
-                  run_dir="data_mouth_v015",
+                  run_start=np.datetime64("2019-02-10 00:00"),
+                  run_stop=np.datetime64("2019-02-20 00:00"),
+                  run_dir="data_mouth_v019",
                   salinity=False,
                   temperature=False,
                   nlayers_3d=0,
@@ -97,4 +99,6 @@ model.run_simulation()
 # v017: winter breach, back to two structures with resistance (like salt v116)
 # v018: longer period like v015, but with the mouth structures.
 #     appears to be identical to v015.
+
+# v019: Flow event -- probably won't work due to missing qcm data
 
