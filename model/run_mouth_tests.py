@@ -46,13 +46,13 @@ class PescaMouthy(pesca_base.PescaButano):
         # now just one mouth structure
         #self.add_mouth_gen_structure(name='mouth_in')
 
-model=PescaMouthy(#run_start=np.datetime64("2016-06-14 00:00"),
-                  #run_stop=np.datetime64("2016-06-23 00:00"),
+model=PescaMouthy(run_start=np.datetime64("2016-06-09 00:00"),
+                  run_stop=np.datetime64("2016-06-20 00:00"),
                   #run_start=np.datetime64("2016-12-10 00:00"),
                   #run_stop=np.datetime64("2016-12-20 00:00"),
-                  run_start=np.datetime64("2019-02-10 00:00"),
-                  run_stop=np.datetime64("2019-02-20 00:00"),
-                  run_dir="data_mouth_v019",
+                  #run_start=np.datetime64("2019-02-10 00:00"),
+                  #run_stop=np.datetime64("2019-02-20 00:00"),
+                  run_dir="data_mouth_v020",
                   salinity=False,
                   temperature=False,
                   nlayers_3d=0,
@@ -101,4 +101,8 @@ model.run_simulation()
 #     appears to be identical to v015.
 
 # v019: Flow event -- probably won't work due to missing qcm data
+#    this has been shifted to run_highflow
+
+# v020: Longer period covering neap
+
 

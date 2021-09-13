@@ -121,8 +121,11 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
         self.add_gazetteer(os.path.join(grid_dir,"point_features.shp"))
         self.add_gazetteer(os.path.join(grid_dir,"polygon_features.shp"))
 
+    def friction_geometries(self):
+        return self.match_gazetteer(geom_type='Polygon',type=type)
+        
     def friction_dataarray(self,type='manning'):
-        polys=self.match_gazetteer(geom_type='Polygon',type=type)
+        polys=self.friction_geometries()
 
         xyn=np.zeros( (self.grid.Nnodes(),3), np.float64)
         xyn[:,:2]=self.grid.nodes['x']
