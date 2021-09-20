@@ -465,21 +465,54 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
         # subset ds to just the run
         ds=ds.isel( time=( (ds.time>=self.run_start) & (ds.time<=self.run_stop)))
 
-        qcm_width=ds.w_inlet
+        # With the slope formulation below, this avoids divide by zero.
+        qcm_width=ds.w_inlet.clip(1.0)
         qcm_z_thalweg=ds.z_thalweg
 
         for idx,(j,ll) in enumerate(zip(edge_mask,j_ll)):
-            # Try a v-shaped channel, slope set by qcm width and
-            # a presumed 1m edge-of-channel relief
+            
+            if 0: # This was still too frictional
+                # Try a v-shaped channel, slope set by qcm width and
+                # a presumed 1m edge-of-channel relief
+                crest=qcm_z_thalweg + 1.0*(ll[1])/(qcm_width/2)
 
-            # This was still too frictional
-            # crest=qcm_z_thalweg + 1.0*(ll[1])/(qcm_width/2)
+            if 0:
+                # Try something more like a trapezoidal channel
+                l_flat=7 # half-width of the flat bottom of the trapezoid
+                z_scale=1.0 # rise of the trapezoid, with the run defined by qcm_width/2
+                # for small qcm_width, additionally limit the elevation to
+                # physical-ish range.
+                shape=(z_scale*(ll[1]-l_flat).clip(0)/(qcm_width/2)).clip(0,8.0)
+                z_offset=-0.10 # additional ad hoc adjustment to qcm_z_thalweg
+                crest=qcm_z_thalweg + z_offset + shape
 
-            # Try something more like a trapezoidal channel
-            l_flat=7 # half-width of the flat bottom
-            z_scale=1.0
-            z_offset=-0.10
-            crest=qcm_z_thalweg + z_offset + z_scale*max(0,(ll[1]-l_flat))/(qcm_width/2)
+            if 1:
+                # Trapezoid, but the flat part is the full width from the QCM
+                lat_flat=qcm_width/2
+                lat_slope = 1.0/10 # outside the width from qcm, 1 in 10 slope
+                shape=(ll[1]-lat_flat).clip(0) * lat_slope
+
+                # And a trapezoidal longitudinal shape, flat in the middle.
+                # sloping down up/downstream.
+                rise=1.0
+                run=(j_ll[:,0].max() - j_ll[:,0].min())/2
+                
+                lon_mid=np.median(j_ll[:,0]) # or the lon coord nearest the middle 
+                lon_slope=rise/run
+                lon_flat=8.0 # half-width of flat length along channel
+                if idx==0:
+                    print("Longitudinal slope is %.3f (%.2f:%.2f)"%(lon_slope,rise,run))
+
+                # additional ad hoc adjustment to qcm_z_thalweg of -0.10, and
+                # slope down away from the middle-ish point.
+                z_offset=-0.10 - lon_slope*( abs(ll[0]-lon_mid )-lon_flat).clip(0)
+                crest=qcm_z_thalweg + z_offset + shape
+                
+            if not np.all(np.isfinite(crest)):
+                print("%d/%d crest values are not finite"%( (~np.isfinite(crest)).sum(),
+                                                            len(crest)))
+                import pdb
+                pdb.set_trace()
             
             self.add_Structure(
                 type='generalstructure',
