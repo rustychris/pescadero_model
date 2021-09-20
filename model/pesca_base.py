@@ -121,8 +121,11 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
         self.add_gazetteer(os.path.join(grid_dir,"point_features.shp"))
         self.add_gazetteer(os.path.join(grid_dir,"polygon_features.shp"))
 
+    def friction_geometries(self):
+        return self.match_gazetteer(geom_type='Polygon',type=type)
+        
     def friction_dataarray(self,type='manning'):
-        polys=self.match_gazetteer(geom_type='Polygon',type=type)
+        polys=self.friction_geometries()
 
         xyn=np.zeros( (self.grid.Nnodes(),3), np.float64)
         xyn[:,:2]=self.grid.nodes['x']
@@ -462,21 +465,54 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
         # subset ds to just the run
         ds=ds.isel( time=( (ds.time>=self.run_start) & (ds.time<=self.run_stop)))
 
-        qcm_width=ds.w_inlet
+        # With the slope formulation below, this avoids divide by zero.
+        qcm_width=ds.w_inlet.clip(1.0)
         qcm_z_thalweg=ds.z_thalweg
 
         for idx,(j,ll) in enumerate(zip(edge_mask,j_ll)):
-            # Try a v-shaped channel, slope set by qcm width and
-            # a presumed 1m edge-of-channel relief
+            
+            if 0: # This was still too frictional
+                # Try a v-shaped channel, slope set by qcm width and
+                # a presumed 1m edge-of-channel relief
+                crest=qcm_z_thalweg + 1.0*(ll[1])/(qcm_width/2)
 
-            # This was still too frictional
-            # crest=qcm_z_thalweg + 1.0*(ll[1])/(qcm_width/2)
+            if 0:
+                # Try something more like a trapezoidal channel
+                l_flat=7 # half-width of the flat bottom of the trapezoid
+                z_scale=1.0 # rise of the trapezoid, with the run defined by qcm_width/2
+                # for small qcm_width, additionally limit the elevation to
+                # physical-ish range.
+                shape=(z_scale*(ll[1]-l_flat).clip(0)/(qcm_width/2)).clip(0,8.0)
+                z_offset=-0.10 # additional ad hoc adjustment to qcm_z_thalweg
+                crest=qcm_z_thalweg + z_offset + shape
 
-            # Try something more like a trapezoidal channel
-            l_flat=7 # half-width of the flat bottom
-            z_scale=1.0
-            z_offset=-0.10
-            crest=qcm_z_thalweg + z_offset + z_scale*max(0,(ll[1]-l_flat))/(qcm_width/2)
+            if 1:
+                # Trapezoid, but the flat part is the full width from the QCM
+                lat_flat=qcm_width/2
+                lat_slope = 1.0/10 # outside the width from qcm, 1 in 10 slope
+                shape=(ll[1]-lat_flat).clip(0) * lat_slope
+
+                # And a trapezoidal longitudinal shape, flat in the middle.
+                # sloping down up/downstream.
+                rise=1.0
+                run=(j_ll[:,0].max() - j_ll[:,0].min())/2
+                
+                lon_mid=np.median(j_ll[:,0]) # or the lon coord nearest the middle 
+                lon_slope=rise/run
+                lon_flat=8.0 # half-width of flat length along channel
+                if idx==0:
+                    print("Longitudinal slope is %.3f (%.2f:%.2f)"%(lon_slope,rise,run))
+
+                # additional ad hoc adjustment to qcm_z_thalweg of -0.10, and
+                # slope down away from the middle-ish point.
+                z_offset=-0.10 - lon_slope*( abs(ll[0]-lon_mid )-lon_flat).clip(0)
+                crest=qcm_z_thalweg + z_offset + shape
+                
+            if not np.all(np.isfinite(crest)):
+                print("%d/%d crest values are not finite"%( (~np.isfinite(crest)).sum(),
+                                                            len(crest)))
+                import pdb
+                pdb.set_trace()
             
             self.add_Structure(
                 type='generalstructure',
@@ -494,6 +530,7 @@ class PescaButano(PescaButanoBase):
     def set_bcs(self):
         self.set_creek_bcs()
         self.set_mouth_bc()
+        self.set_atmospheric_bcs()
 
     def set_mouth_bc(self):
         ocean_bc=self.set_mouth_stage_qcm()
@@ -662,6 +699,15 @@ class PescaButano(PescaButanoBase):
             GateOpeningWidth=width,                 	# Horizontal opening width between the doors (m)
             #GateOpeningHorizontalDirection=symmetric,           	# Horizontal direction of the opening doors
             )
+
+    def set_atmospheric_bcs(self):
+        ds=self.prep_qcm_data()
+
+        ET_mm_hr=ds['evapotr_mmhour']
+        # negligible direct rain, just ET=negative rain
+        
+        precip=hm.RainfallRateBC(rainfall_rate=-24*ET_mm_hr)
+        self.add_bcs([precip])
         
     ds_qcm=None
     def prep_qcm_data(self):
@@ -705,8 +751,12 @@ class PescaButano(PescaButanoBase):
             # *3600 --> s to hour
             # would be better to figure out time-average wet area. This figure is the
             # total grid area.
+            # Plotted the wetted area over time for a run that spanned closed and
+            # open periods. Fraction wetted was around 0.85 leading up to breach.
+            # Once tidal, fraction wetted was around 0.5 mean. I think it is more the
+            # closed conditions that we're interested in here, so call it 0.75
             grid_area=1940000 # m2
-            qcm['evapotr_mmhour']=qcm['evapotr']/grid_area*1000*3600
+            qcm['evapotr_mmhour']=qcm['evapotr']/(0.75*grid_area)*1000*3600
             # data already [+]            
             qcm['wave_overtop']= qcm['Modeled wave overtopping'] * 0.02831685 # from ft3/s to m3/s
 

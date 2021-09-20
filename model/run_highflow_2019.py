@@ -26,10 +26,29 @@ class PescaHighFlow(pesca_base.PescaButano):
     def set_mouth_bc(self):
         self.log.warning("Have to disable Hsig adjustment FIX")
         self.set_mouth_stage_noaa(hsig_adjustment=False)
-    def update_initial_water_level(self):
-        self.log.warning("QCM doesn't cover initial condition, fall back to BC")
-        super(PescaButanoBase,self).update_initial_water_level()
+        
+    def add_mouth_structure(self):
+        # Baseline:
+        #super(PescaMouthy,self).add_mouth_structure()
 
+        # synthetic DEM instead of structures
+        self.add_mouth_as_bathy()
+        
+    def update_initial_water_level(self):
+        # Careful with the change below. We extend the qcm dataset to feed into
+        # the inlet geometry, but the ocean level is not correct, so here force
+        # it to use the NOAA BC for the mouth.
+        self.log.warning("QCM doesn't cover initial condition, fall back to BC")
+        super(pesca_base.PescaButanoBase,self).update_initial_water_level()
+
+    def friction_geometries(self):
+        polys=super(PescaHighFlow,self).match_gazetteer(geom_type='Polygon',type=type)
+        for p in polys:
+            if p['name'] in ['middle pesca channel','lower pesca channel']:
+                p['n']=0.055
+                self.log.warning("OVERRIDING friction for {p['name']} to {p['n']}")
+        return polys
+        
     def prep_qcm_data(self):
         # Add later data for a static, open mouth
         ds=super(PescaHighFlow,self).prep_qcm_data().copy()
@@ -45,8 +64,8 @@ class PescaHighFlow(pesca_base.PescaButano):
     # Use default mouth handling - two frictional structures
     
 model=PescaHighFlow(run_start=np.datetime64("2019-02-10 00:00"),
-                    run_stop=np.datetime64("2019-02-20 00:00"),
-                    run_dir="data_highflow_v019",
+                    run_stop=np.datetime64("2019-02-15 00:00"),
+                    run_dir="data_highflow_v023",
                     salinity=False,
                     temperature=False,
                     nlayers_3d=0,
@@ -63,4 +82,8 @@ model.partition()
 model.run_simulation()
 
 # v019: Flow event -- probably won't work due to missing qcm data
-
+# v020: drop friction in middle pescadero. Makes almost no difference. Verified that
+#   the change was in place, but all the back up is from the mouth.
+# v021: shorter, and use fake bathy instead of structures
+# v022: bump up friction. Full disk, failed mid-run
+# v023: try that again.

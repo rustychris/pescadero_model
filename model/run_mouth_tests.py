@@ -33,34 +33,37 @@ class PescaMouthy(pesca_base.PescaButano):
     # Note that the salinity runs have been dropping the thalweg by 0.15 cm
     def add_mouth_structure(self):
         # Baseline:
-        super(PescaMouthy,self).add_mouth_structure()
+        # super(PescaMouthy,self).add_mouth_structure()
 
         # synthetic DEM instead of structures
         #self.add_mouth_as_bathy()
 
         # synthetic DEM as structures
-        # self.add_mouth_as_structures()
+        self.add_mouth_as_structures()
 
         # Make a sequence of partially open gates?  nah
 
         # now just one mouth structure
         #self.add_mouth_gen_structure(name='mouth_in')
 
-model=PescaMouthy(#run_start=np.datetime64("2016-06-14 00:00"),
-                  #run_stop=np.datetime64("2016-06-23 00:00"),
-                  #run_start=np.datetime64("2016-12-10 00:00"),
-                  #run_stop=np.datetime64("2016-12-20 00:00"),
-                  run_start=np.datetime64("2019-02-10 00:00"),
-                  run_stop=np.datetime64("2019-02-20 00:00"),
-                  run_dir="data_mouth_v019",
+model=PescaMouthy(#run_start=np.datetime64("2016-06-09 00:00"),
+                  #run_stop=np.datetime64("2016-06-20 00:00"),
+                  run_start=np.datetime64("2016-12-10 00:00"),
+                  run_stop=np.datetime64("2016-12-20 00:00"),
+                  #run_start=np.datetime64("2019-02-10 00:00"),
+                  #run_stop=np.datetime64("2019-02-20 00:00"),
+                  run_dir="data_mouth_v024",
                   salinity=False,
                   temperature=False,
                   nlayers_3d=0,
                   pch_area=2.0)
 
 model.mdu['output','MapInterval']=1800
+model.mdu['geometry','ChangeVelocityAtStructures']=1
 # model.mdu['time','DtUser']=30.
-# model.mdu['numerics','CFLmax']=0.4
+model.mdu['numerics','CFLmax']=0.5
+model.mdu['numerics','Teta0']=0.7
+
 # model.mdu['time','AutoTimestepNoStruct']=1
 
 ## 
@@ -101,4 +104,14 @@ model.run_simulation()
 #     appears to be identical to v015.
 
 # v019: Flow event -- probably won't work due to missing qcm data
+#    this has been shifted to run_highflow
 
+# v020: Longer period covering neap
+
+
+# v021: Return to v016-ish, mouth_as_structures, but try DFM option to omit
+#       acceleration over structures.
+#       Stable, but not a great improvement in draining ability.
+# v022: Broader trapezoidal channel.
+# v023: Taper structures in the longitudinal direction
+# v024: More conservative eta and CFLmax choices

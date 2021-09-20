@@ -15,3 +15,6 @@ run_rectangle
 data_mouth*
 transect-legend.png
 run_mouth*
+data_highflow*
+highwater_analysis
+local_config.py.2021.03
