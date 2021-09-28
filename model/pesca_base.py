@@ -541,6 +541,7 @@ class PescaButano(PescaButanoBase):
     def set_bcs(self):
         self.set_creek_bcs()
         self.set_mouth_bc()
+        self.set_atmospheric_bcs()
 
     def set_mouth_bc(self):
         ocean_bc=self.set_mouth_stage_qcm()
@@ -709,6 +710,15 @@ class PescaButano(PescaButanoBase):
             GateOpeningWidth=width,                 	# Horizontal opening width between the doors (m)
             #GateOpeningHorizontalDirection=symmetric,           	# Horizontal direction of the opening doors
             )
+
+    def set_atmospheric_bcs(self):
+        ds=self.prep_qcm_data()
+
+        ET_mm_hr=ds['evapotr_mmhour']
+        # negligible direct rain, just ET=negative rain
+        
+        precip=hm.RainfallRateBC(rainfall_rate=-24*ET_mm_hr)
+        self.add_bcs([precip])
         
     ds_qcm=None
     def prep_qcm_data(self):
@@ -752,8 +762,12 @@ class PescaButano(PescaButanoBase):
             # *3600 --> s to hour
             # would be better to figure out time-average wet area. This figure is the
             # total grid area.
+            # Plotted the wetted area over time for a run that spanned closed and
+            # open periods. Fraction wetted was around 0.85 leading up to breach.
+            # Once tidal, fraction wetted was around 0.5 mean. I think it is more the
+            # closed conditions that we're interested in here, so call it 0.75
             grid_area=1940000 # m2
-            qcm['evapotr_mmhour']=qcm['evapotr']/grid_area*1000*3600
+            qcm['evapotr_mmhour']=qcm['evapotr']/(0.75*grid_area)*1000*3600
             # data already [+]            
             qcm['wave_overtop']= qcm['Modeled wave overtopping'] * 0.02831685 # from ft3/s to m3/s
 
