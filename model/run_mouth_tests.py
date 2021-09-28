@@ -52,10 +52,11 @@ model=PescaMouthy(#run_start=np.datetime64("2016-06-09 00:00"),
                   run_stop=np.datetime64("2016-12-20 00:00"),
                   #run_start=np.datetime64("2019-02-10 00:00"),
                   #run_stop=np.datetime64("2019-02-20 00:00"),
-                  run_dir="data_mouth_v024",
+                  run_dir="data_mouth_v025",
                   salinity=False,
                   temperature=False,
                   nlayers_3d=0,
+                  mouth_z_dredge=0,
                   pch_area=2.0)
 
 model.mdu['output','MapInterval']=1800
@@ -108,10 +109,10 @@ model.run_simulation()
 
 # v020: Longer period covering neap
 
-
 # v021: Return to v016-ish, mouth_as_structures, but try DFM option to omit
 #       acceleration over structures.
 #       Stable, but not a great improvement in draining ability.
 # v022: Broader trapezoidal channel.
 # v023: Taper structures in the longitudinal direction
 # v024: More conservative eta and CFLmax choices
+# v025: Dredge the bathy around the structures
