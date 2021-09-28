@@ -412,7 +412,10 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
             plt.axis('off')
             plt.axis((552070., 552178., 4124574., 4124708.))
             fig.savefig('mouth_bathy.png',dpi=150)
-            
+
+    # If not None, set bed elevation "near" mouth structures to the given
+    # elevation
+    mouth_z_dredge=None
     def add_mouth_as_structures(self,plot=False):
         """
         Use 'mouth_centerline' and 'mmouth...' features in the shapefiles
@@ -521,8 +524,16 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
                 CrestLevel=crest,	# Bed level at centre of structure (m AD)
                 extraresistance=0,                   	# Extra resistance (-)
                 GateOpeningWidth=100.0,                 	# Horizontal opening width between the doors (m)
-            )        
+            )
 
+        if self.mouth_z_dredge is not None:
+            e2c=self.grid.edge_to_cells()
+            cells=np.unique(e2c[edge_mask])
+            cells=cells[cells>=0]
+            nodes=np.unique(self.grid.cells['nodes'][cells].ravel())
+            nodes=nodes[nodes>=0]
+            self.grid.nodes['node_z_bed'][nodes] = np.minimum( self.grid.nodes['node_z_bed'][nodes],
+                                                               self.mouth_z_dredge)
 
 class PescaButano(PescaButanoBase):
     """ Add realistic boundary conditions to base Pescadero model
