@@ -18,8 +18,7 @@ from stompy.spatial import linestring_utils
 from shapely import geometry
 import local_config
 
-here=os.path.dirname(__file__)
-cache_dir=os.path.join(here,'cache')
+cache_dir=os.path.join(local_config.model_dir,'cache')
 if not os.path.exists(cache_dir):
     os.makedirs(cache_dir)
 
@@ -115,7 +114,7 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
     def set_grid_and_features(self):
         # For now the only difference is the DEM. If they diverge, might go
         # with separate grid directories instead (maybe with some common features)
-        grid_dir="../grids/pesca_butano_v03"
+        grid_dir=os.path.join(local_config.model_dir,"../grids/pesca_butano_v03")
         self.set_grid(os.path.join(grid_dir, f"pesca_butano_{self.terrain}_deep_bathy.nc"))
         self.add_gazetteer(os.path.join(grid_dir,"line_features.shp"))
         self.add_gazetteer(os.path.join(grid_dir,"point_features.shp"))
@@ -601,7 +600,7 @@ class PescaButano(PescaButanoBase):
         return ocean_bc
 
     def set_creek_bcs(self):
-        df=pd.read_csv(os.path.join(here,"../forcing/tu_flows/TU_flows_SI.csv"),
+        df=pd.read_csv(os.path.join(local_config.model_dir,"../forcing/tu_flows/TU_flows_SI.csv"),
                        parse_dates=['time'])
 
         def extract_da(desc):
@@ -695,10 +694,10 @@ class PescaButano(PescaButanoBase):
     def prep_qcm_data(self):
         '''load QCM output and prepare xr dataset'''
         if self.ds_qcm is None:
-            qcm_pre2016=pd.read_csv("../../data/ESA_QCM/ESA_draft_PescaderoQCM_output.csv",
+            qcm_pre2016=pd.read_csv(os.path.join(local_config.data_dir,"ESA_QCM/ESA_draft_PescaderoQCM_output.csv"),
                                     skiprows=[0],usecols=range(7),
                                     parse_dates=['Date (PST)'])
-            qcm_2016_2017=pd.read_csv("../../data/ESA_QCM/ESA_draft_PescaderoQCM_output_4.28.2021.csv",
+            qcm_2016_2017=pd.read_csv(os.path.join(local_config.data_dir,"ESA_QCM/ESA_draft_PescaderoQCM_output_4.28.2021.csv"),
                                       skiprows=[0],usecols=range(14),
                                       parse_dates=['Date (PST)'])
             # some extra rows in the csv
