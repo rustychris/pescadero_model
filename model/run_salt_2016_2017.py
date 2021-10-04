@@ -2,34 +2,58 @@
 Runs targeting the 2016/2017 period of the BML field data
 """
 import pesca_base
+import os
+import shutil
 import numpy as np
+from stompy import utils
 from stompy.model import hydro_model
 from stompy.model.delft import dflow_model
 from stompy.grid import unstructured_grid
+import shapely
+if shapely.__version__ < "1.7.":
+    print("WARNING: shapely before 1.7 lacks substring(), which is used in the synthetic bathymetry")
+from shapely import ops, geometry
 
 ##
+class PescaDeeper(pesca_base.PescaButano):
+    def update_initial_water_level(self):
+        # stand-in while Sophie updates
+        super(pesca_base.PescaButanoBase,self).update_initial_water_level()
 
-model=pesca_base.PescaButano(run_start=np.datetime64("2016-06-01 00:00"),
-                             run_stop=np.datetime64("2016-06-30 12:00"),
-                             run_dir="run_salt_20160520-v64",
-                             salinity=True,
-                             temperature=True,
-                             nlayers_3d=28,
-                             num_procs=16)
+    def add_mouth_structure(self):
+        # Baseline:
+        # super(PescaDeeper,self).add_mouth_structure()
 
-#model.mdu['numerics','CFLmax']=0.8 
+        # synthetic DEM instead of structures
+        # self.add_mouth_as_bathy()
+        self.add_mouth_as_structures()
 
-# Diagnosing time step slowdown
-# model.mdu['time','Timestepanalysis']=1
-model.mdu['time','AutoTimestep']=4 # 5=bad. 4 okay but slower, seems no better than 3.
+model=PescaDeeper(run_start=np.datetime64("2016-06-10 00:00"),
+                  run_stop=np.datetime64("2016-06-20 00:00"),
+                  run_dir="run_salt_20160520-v117",
+                  salinity=True,
+                  temperature=False,
+                  nlayers_3d=100,
+                  pch_area=2.0,
+                  z_max=2.5,
+                  z_min=-0.5,
+                  num_procs=16)
 
-# model.mdu['numerics','TurbulenceModel']=1 # 0: dead run.  1: should be 5e-5.
-# model.mdu['physics','Vicoww']=5e-3 # 100x greater than before
+# model.mdu['time','AutoTimestep']=2 # 5=bad. 4 okay but slower, seems no better than 2.
+model.mdu['output','MapInterval']=12*3600
 
-# Does a saline IC help at all?
-model.mdu['physics','InitialSalinity']=32.0
+model.mdu['numerics','TurbulenceModel']=3 # 0: breaks, 1: constant,  3: k-eps
+model.mdu['physics','Dicoww']=1e-8
+model.mdu['physics','Vicoww']=1e-7
+
+#model.mdu['numerics','Vertadvtypsal']=4
+#model.mdu['numerics','Maxitverticalforestersal']=20
+model.mdu['numerics','CFLmax']=0.4
 
 model.write()
+
+shutil.copyfile(__file__,os.path.join(model.run_dir,"script.py"))
+shutil.copyfile("pesca_base.py",os.path.join(model.run_dir,"pesca_base.py"))
 model.partition()
 model.run_simulation()
 
