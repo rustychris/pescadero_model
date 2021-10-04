@@ -240,30 +240,26 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
         self.add_nmc_structure()
         self.add_nm_ditch_structure()
         self.add_mouth_structure()
+        if  self.terrain=='asbuilt':
+            self.add_butano_weir_structure()
 
-    pch_area=0.4*0.5
+    pch_area = 6*3.1416*0.6**2 # 6 culverts of 2ft radius
     def add_pch_structure(self):
-        # originally this was a 0.4m x 0.5 m
-        # opening. Try instead for a wide, short
-        # opening to decease CFL issues.
-        z_crest=0.6 # matches bathy.
-        width=12.0
+        z_crest=0.5 # The design plans for the culverts put base at -1ft NGVD --> 0.5m NABD88
+        height = 1.2 # height of the culverts (48in)
+        
+        # NOTE: depending on DFM settings, the culvert can create CFL issues. Making
+        # CrestWidth longer, and height shorter distributes flow over more edges and
+        # can mitigate CFL issues.
         self.add_Structure(
             type='gate',
             name='pch_gate',
             GateHeight=1.5, # top of door to bottom of door
-            GateLowerEdgeLevel=z_crest + self.pch_area/width, # elevation of top of culvert
+            GateLowerEdgeLevel=z_crest + height, # elevation of top of culvert
             GateOpeningWidth=0.0, # gate does not open
             CrestLevel=z_crest, 
-            CrestWidth=width, # extra wide for decreased CFL limitation
+            CrestWidth=self.pch_area/height, # to conserve the same effective cross section
         )
-        # Original settings:
-        # GateHeight=1.5, # top of door to bottom of door
-        # GateLowerEdgeLevel=1.0, # elevation of top of culvert
-        # GateOpeningWidth=0.0, # gate does not open
-        # CrestLevel=0.6, # matches bathy.
-        # CrestWidth=0.5, # total guess
-
         
     def add_nmc_structure(self):
         self.add_Structure(
@@ -286,6 +282,15 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
             CrestLevel=1.2, # roughly matches bathy.
             CrestWidth=0.3, # total guess
         )
+        
+    def add_butano_weir_structure(self):
+        self.add_Structure(
+            type='weir',
+            name='butano_weir',
+            crest_level=2, # based on 2020 BC3 observations
+            crest_width=0.6, # total guess from photo
+            lat_cont_coeff = 1,
+        )         
 
     def add_mouth_structure(self):
         """
@@ -497,6 +502,12 @@ class PescaButano(PescaButanoBase):
     def set_bcs(self):
         self.set_creek_bcs()
         self.set_mouth_bc()
+        self.set_source_sink()
+        
+    def set_source_sink(self):
+        self.set_seepage()
+        self.set_overtopping()
+        #self.set_evaporation()        
 
     def set_mouth_bc(self):
         ocean_bc=self.set_mouth_stage_qcm()
@@ -621,6 +632,20 @@ class PescaButano(PescaButanoBase):
             for ck in [bc_butano,bc_pesca]:
                 ck_temp=hm.ScalarBC(parent=ck,scalar='temperature',value=18)
                 self.add_bcs([ck_temp])
+    def set_seepage(self):
+        
+        ds = self.prep_qcm_data()
+        seepage= ds['seepage_abs']       
+        bc_seepage=hm.SourceSinkBC(name='seepage',flow=seepage,dredge_depth=None)
+        self.add_bcs([bc_seepage])
+        print('Setting seepage')
+
+    def set_overtopping(self):
+        
+        ds = self.prep_qcm_data()
+        overtopping= ds['wave_overtop']       
+        bc_overtopping=hm.SourceSinkBC(name='wave_overtop',flow=overtopping,dredge_depth=None)
+        self.add_bcs([bc_overtopping])
 
     # time shift for QCM, while we don't have QCM output for
     # the period of the BML data
