@@ -671,14 +671,16 @@ class PescaButano(PescaButanoBase):
     # the period of the BML data
     qcm_time_offset=np.timedelta64(0,'s')
             
-    def add_mouth_gen_structure(self,name):
+    def add_mouth_gen_structure(self,name,crest=None,width=None):
         """
         Set up the flow control structure for the inner mouth structure
         """
         ds = self.prep_qcm_data()
 
-        crest= ds['z_thalweg']
-        width= ds['w_inlet']    
+        if crest is None:
+            crest= ds['z_thalweg']
+        if width is None:
+            width= ds['w_inlet']    
 
         self.add_Structure(
             type='generalstructure',
@@ -698,12 +700,12 @@ class PescaButano(PescaButanoBase):
             pos_freegateflowcoeff=1,                   	# Positive free gate flow (-)
             pos_drowngateflowcoeff=1,                   	# Positive drowned gate flow (-)
             pos_freeweirflowcoeff=10.0,                   	# Positive free weir flow (-)
-            pos_drownweirflowcoeff=1,                   	# Positive drowned weir flow (-)
+            pos_drownweirflowcoeff=10.,                   	# Positive drowned weir flow (-)
             pos_contrcoeffreegate=1,                   	# Positive flow contraction coefficient (-)
             neg_freegateflowcoeff=1,                   	# Negative free gate flow (-)
             neg_drowngateflowcoeff=1,                   	# Negative drowned gate flow (-)
             neg_freeweirflowcoeff=10.0,                   	# Negative free weir flow (-)
-            neg_drownweirflowcoeff=1,                   	# Negative drowned weir flow (-)
+            neg_drownweirflowcoeff=10,                   	# Negative drowned weir flow (-)
             neg_contrcoeffreegate=1,                   	# Negative flow contraction coefficient (-)
             extraresistance=0.0,                   	# Extra resistance (-)
             GateHeight=10,                   	# Vertical gate door height (m)
@@ -770,10 +772,11 @@ class PescaButano(PescaButanoBase):
             qcm['evapotr_mmhour']=qcm['evapotr']/(0.75*grid_area)*1000*3600
             # data already [+]            
             qcm['wave_overtop']= qcm['Modeled wave overtopping'] * 0.02831685 # from ft3/s to m3/s
+            qcm['flow_inlet']=qcm['Modeled inlet flow']* 0.02831685
 
             ds=xr.Dataset.from_dataframe(qcm[ 
                 ['time','z_ocean','z_thalweg','w_inlet','seepage_abs','evapotr_mmhour','wave_overtop',
-                 'z_lagoon']]
+                 'z_lagoon','flow_inlet']]
                 .set_index('time'))
             self.ds_qcm=ds 
             
