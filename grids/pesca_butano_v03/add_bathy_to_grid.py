@@ -7,20 +7,23 @@ import matplotlib.pyplot as plt
 
 ##
 
-bathy_dir="E:/proj/Pescadero/pescadero_bathy"
+bathy_dir="../../../bathy"
 # The as-built needs to be generated
 #bathy_asbuilt_fn=os.path.join(bathy_dir,'compiled-dem-asbuilt-20210913-1m.tif')
 bathy_existing_fn=os.path.join(bathy_dir,'compiled-dem-existing-20210913-1m_deep_channel_mod3.tif')
 
 ##
 
-grid_dir="Y:/smunger/GitHub/Pescadero/pescadero_grid"
+grid_dir="../../../grid"
 grid_fn=os.path.join(grid_dir,'quad_tri_v21-edit05.nc')
 g=unstructured_grid.UnstructuredGrid.read_ugrid(grid_fn)
 g.renumber()
 
 ##
-for dem_fn, name in [ (bathy_existing_fn,'existing') ]:
+for dem_fn, name in [
+        # (bathy_asbuilt_fn,'asbuilt'),
+        (bathy_existing_fn,'existing')
+]:
     print("Setting bathymetry for %s"%name)
     if not os.path.exists(dem_fn):
         print("----  DEM file %s doesn't exist ----"%dem_fn)

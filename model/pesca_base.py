@@ -243,29 +243,23 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
         if  self.terrain=='asbuilt':
             self.add_butano_weir_structure()
 
-    #pch_area=0.4*0.5
     pch_area = 6*3.1416*0.6**2 # 6 culverts of 2ft radius
     def add_pch_structure(self):
-        # originally this was a 0.4m x 0.5 m but the real area is larger
         z_crest=0.5 # The design plans for the culverts put base at -1ft NGVD --> 0.5m NABD88
         height = 1.2 # height of the culverts (48in)
+        
+        # NOTE: depending on DFM settings, the culvert can create CFL issues. Making
+        # CrestWidth longer, and height shorter distributes flow over more edges and
+        # can mitigate CFL issues.
         self.add_Structure(
             type='gate',
             name='pch_gate',
             GateHeight=1.5, # top of door to bottom of door
-            #GateLowerEdgeLevel=z_crest + self.pch_area/width, # elevation of top of culvert
             GateLowerEdgeLevel=z_crest + height, # elevation of top of culvert
             GateOpeningWidth=0.0, # gate does not open
             CrestLevel=z_crest, 
             CrestWidth=self.pch_area/height, # to conserve the same effective cross section
         )
-        # Original settings:
-        # GateHeight=1.5, # top of door to bottom of door
-        # GateLowerEdgeLevel=1.0, # elevation of top of culvert
-        # GateOpeningWidth=0.0, # gate does not open
-        # CrestLevel=0.6, # matches bathy.
-        # CrestWidth=0.5, # total guess
-
         
     def add_nmc_structure(self):
         self.add_Structure(
@@ -321,185 +315,185 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
             # CrestWidth=0.3, # should be the length of the edges
         )
 
-    # def centerline_to_node_coordinates(self,center,max_width=50.0):
-    #     """
-    #     Select nodes within max_width/2 of the centerline, 
-    #     and approximate an along/across channel coordinate system.
-    #     Trims the ends to approximate the distance as perpendicular to the
-    #     line. Used in add_mouth_as_bathy()
+    def centerline_to_node_coordinates(self,center,max_width=50.0):
+        """
+        Select nodes within max_width/2 of the centerline, 
+        and approximate an along/across channel coordinate system.
+        Trims the ends to approximate the distance as perpendicular to the
+        line. Used in add_mouth_as_bathy()
 
-    #     center: linestring geometry
-    #     max_width: full width of the swath to consider
-    #     returns node_indexes, d_along, d_across
-    #     node_indexes is in sorted order.
-    #     """
-    #     # Find the collection of nodes that may be relevant.
-    #     region=center.buffer(max_width/2.0)
-    #     node_sel=np.nonzero( self.grid.select_nodes_intersecting(region) )[0]
+        center: linestring geometry
+        max_width: full width of the swath to consider
+        returns node_indexes, d_along, d_across
+        node_indexes is in sorted order.
+        """
+        # Find the collection of nodes that may be relevant.
+        region=center.buffer(max_width/2.0)
+        node_sel=np.nonzero( self.grid.select_nodes_intersecting(region) )[0]
 
-    #     # For those nodes calculate longitudinal and lateral coordinates
-    #     node_long=np.r_[ [center.project( geometry.Point(p) )
-    #                       for p in self.grid.nodes['x'][node_sel]] ]
+        # For those nodes calculate longitudinal and lateral coordinates
+        node_long=np.r_[ [center.project( geometry.Point(p) )
+                          for p in self.grid.nodes['x'][node_sel]] ]
 
-    #     # And ignore nodes closest to the ends
-    #     good=(node_long>0.0) & (node_long<center.length)
-    #     node_sel=node_sel[good]
-    #     node_long=node_long[good]
-    #     projected=np.array( [np.array(center.interpolate(nlong)) for nlong in node_long] )
-    #     pnts=self.grid.nodes['x'][node_sel]
+        # And ignore nodes closest to the ends
+        good=(node_long>0.0) & (node_long<center.length)
+        node_sel=node_sel[good]
+        node_long=node_long[good]
+        projected=np.array( [np.array(center.interpolate(nlong)) for nlong in node_long] )
+        pnts=self.grid.nodes['x'][node_sel]
 
-    #     node_lat=utils.dist(projected-pnts) # fyi, not really a coordinate, since it's nonnegative
-    #     good=node_lat<=max_width/2.
-    #     node_sel=node_sel[good]
-    #     node_long=node_long[good]
-    #     node_lat=node_lat[good]
-    #     pnts=self.grid.nodes['x'][node_sel]
+        node_lat=utils.dist(projected-pnts) # fyi, not really a coordinate, since it's nonnegative
+        good=node_lat<=max_width/2.
+        node_sel=node_sel[good]
+        node_long=node_long[good]
+        node_lat=node_lat[good]
+        pnts=self.grid.nodes['x'][node_sel]
 
-    #     # This makes it easier for downstream code to use searchsorted
-    #     assert np.all(np.diff(node_sel)>0)
-    #     # Now I have a local coordinate system (ish)
-    #     return node_sel,node_long,node_lat
+        # This makes it easier for downstream code to use searchsorted
+        assert np.all(np.diff(node_sel)>0)
+        # Now I have a local coordinate system (ish)
+        return node_sel,node_long,node_lat
             
-    # def add_mouth_as_bathy(self,plot=False):
-    #     """
-    #     Update bed elevation in the grid to reflect the QCM geometry
-    #     at a specific time (run_start). Uses the 'mouth_centerline' feature
-    #     in the shapefile inputs to define the centerline and which nodes will
-    #     be updated. Bed is static, though.
-    #     """
-    #     # Choose geometry from the start of the period:
-    #     ds=self.prep_qcm_data()
-    #     sel=np.nonzero( ds.time.values>=self.run_start )[0][0]
-    #     qcm_snap=ds.isel(time=sel)
-    #     qcm_width=qcm_snap.w_inlet.item()
-    #     qcm_z_thalweg=qcm_snap.z_thalweg.item()
+    def add_mouth_as_bathy(self,plot=False):
+        """
+        Update bed elevation in the grid to reflect the QCM geometry
+        at a specific time (run_start). Uses the 'mouth_centerline' feature
+        in the shapefile inputs to define the centerline and which nodes will
+        be updated. Bed is static, though.
+        """
+        # Choose geometry from the start of the period:
+        ds=self.prep_qcm_data()
+        sel=np.nonzero( ds.time.values>=self.run_start )[0][0]
+        qcm_snap=ds.isel(time=sel)
+        qcm_width=qcm_snap.w_inlet.item()
+        qcm_z_thalweg=qcm_snap.z_thalweg.item()
 
-    #     # Use thalweg_pesc to guide the center of the synthetic channel
-    #     center=self.match_gazetteer(name='mouth_centerline')[0]['geom']
+        # Use thalweg_pesc to guide the center of the synthetic channel
+        center=self.match_gazetteer(name='mouth_centerline')[0]['geom']
 
-    #     node_sel,node_long,node_lat = self.centerline_to_node_coordinates(center)
+        node_sel,node_long,node_lat = self.centerline_to_node_coordinates(center)
         
-    #     # Make a copy of original depth data and update 
-    #     self.grid.add_node_field('node_z_bed_orig',self.grid.nodes['node_z_bed'],on_exists='pass')
+        # Make a copy of original depth data and update 
+        self.grid.add_node_field('node_z_bed_orig',self.grid.nodes['node_z_bed'],on_exists='pass')
         
-    #     def channel(n,c_long,c_lat):
-    #         z_orig=self.grid.nodes['node_z_bed_orig'][n]
-    #         if 0:
-    #             # rectangular channel, but only make things shallower than
-    #             # original
-    #             if c_lat<qcm_width/2:
-    #                 return max(z_orig,qcm_z_thalweg)
-    #             else:
-    #                 return z_orig
-    #         else:
-    #             # linear from 0 at thalweg to 1 at prescribed width
-    #             frac=(2*c_lat/qcm_width).clip(0,1.0)
-    #             # V-shaped channel with 0.2m of relief, center is 0.1
-    #             # deeper than qcm, edge 0.1 m shallower.
-    #             return max(z_orig,qcm_z_thalweg + frac*0.2 - 0.1)
+        def channel(n,c_long,c_lat):
+            z_orig=self.grid.nodes['node_z_bed_orig'][n]
+            if 0:
+                # rectangular channel, but only make things shallower than
+                # original
+                if c_lat<qcm_width/2:
+                    return max(z_orig,qcm_z_thalweg)
+                else:
+                    return z_orig
+            else:
+                # linear from 0 at thalweg to 1 at prescribed width
+                frac=(2*c_lat/qcm_width).clip(0,1.0)
+                # V-shaped channel with 0.2m of relief, center is 0.1
+                # deeper than qcm, edge 0.1 m shallower.
+                return max(z_orig,qcm_z_thalweg + frac*0.2 - 0.1)
 
-    #     for n,c_long,c_lat in zip(node_sel,node_long,node_lat):
-    #         self.grid.nodes['node_z_bed'][n]=channel(n,c_long,c_lat)
+        for n,c_long,c_lat in zip(node_sel,node_long,node_lat):
+            self.grid.nodes['node_z_bed'][n]=channel(n,c_long,c_lat)
 
-    #     # stats on the difference:
-    #     n_below=np.sum( self.grid.nodes['node_z_bed']<self.grid.nodes['node_z_bed_orig'])
-    #     n_above=np.sum( self.grid.nodes['node_z_bed']>self.grid.nodes['node_z_bed_orig'])
-    #     n_equal=np.sum( self.grid.nodes['node_z_bed']==self.grid.nodes['node_z_bed_orig'])
-    #     # print(f"{n_below} nodes were lowered, {n_above} nodes were raised, {n_equal} nodes stayed the same")
+        # stats on the difference:
+        n_below=np.sum( self.grid.nodes['node_z_bed']<self.grid.nodes['node_z_bed_orig'])
+        n_above=np.sum( self.grid.nodes['node_z_bed']>self.grid.nodes['node_z_bed_orig'])
+        n_equal=np.sum( self.grid.nodes['node_z_bed']==self.grid.nodes['node_z_bed_orig'])
+        # print(f"{n_below} nodes were lowered, {n_above} nodes were raised, {n_equal} nodes stayed the same")
         
-    #     if plot: 
-    #         fig=plt.figure(1)
-    #         fig.clf()
-    #         self.grid.plot_edges(color='k',lw=0.4)
-    #         self.grid.plot_nodes(mask=node_sel)
+        if plot: 
+            fig=plt.figure(1)
+            fig.clf()
+            self.grid.plot_edges(color='k',lw=0.4)
+            self.grid.plot_nodes(mask=node_sel)
 
-    #         plot_wkb.plot_wkb(center,color='orange')
+            plot_wkb.plot_wkb(center,color='orange')
 
-    #         #plt.scatter(pnts[:,0],pnts[:,1],30,node_lat,cmap=turbo)
-    #         self.grid.contourf_node_values(self.grid.nodes['node_z_bed'],np.linspace(0,2.5,30),cmap=turbo)
+            #plt.scatter(pnts[:,0],pnts[:,1],30,node_lat,cmap=turbo)
+            self.grid.contourf_node_values(self.grid.nodes['node_z_bed'],np.linspace(0,2.5,30),cmap=turbo)
 
-    #         plt.axis('tight')
-    #         plt.axis('equal')
-    #         plt.axis('off')
-    #         plt.axis((552070., 552178., 4124574., 4124708.))
-    #         fig.savefig('mouth_bathy.png',dpi=150)
+            plt.axis('tight')
+            plt.axis('equal')
+            plt.axis('off')
+            plt.axis((552070., 552178., 4124574., 4124708.))
+            fig.savefig('mouth_bathy.png',dpi=150)
             
-    # def add_mouth_as_structures(self,plot=False):
-    #     """
-    #     Use 'mouth_centerline' and 'mmouth...' features in the shapefiles
-    #     to define many rows of structures. Each line is broken into individual
-    #     edges, each of which gets its own structure and timeseries.
-    #     """
-    #     # Choose geometry from the start of the period:
-    #     center=self.match_gazetteer(name='mouth_centerline')[0]['geom']
+    def add_mouth_as_structures(self,plot=False):
+        """
+        Use 'mouth_centerline' and 'mmouth...' features in the shapefiles
+        to define many rows of structures. Each line is broken into individual
+        edges, each of which gets its own structure and timeseries.
+        """
+        # Choose geometry from the start of the period:
+        center=self.match_gazetteer(name='mouth_centerline')[0]['geom']
 
-    #     # Now just pull from shapefile:
-    #     mstructs=self.match_gazetteer(type='multistructure',name=re.compile('mmouth.*'))
+        # Now just pull from shapefile:
+        mstructs=self.match_gazetteer(type='multistructure',name=re.compile('mmouth.*'))
 
-    #     edge_mask=[] # list of indexes, not really a 'mask'
-    #     for mstruct in mstructs:
-    #         edge_mask.extend( self.grid.select_edges_by_polyline(mstruct['geom'],boundary=False) )
-    #     edge_mask=np.unique(edge_mask)
+        edge_mask=[] # list of indexes, not really a 'mask'
+        for mstruct in mstructs:
+            edge_mask.extend( self.grid.select_edges_by_polyline(mstruct['geom'],boundary=False) )
+        edge_mask=np.unique(edge_mask)
 
-    #     j_xy=self.grid.edges_center()[edge_mask]
+        j_xy=self.grid.edges_center()[edge_mask]
 
-    #     # Get the streamwise/cross coordinates
-    #     j_ll=np.zeros( (len(edge_mask),2), np.float64)
-    #     for i,xy in enumerate(j_xy):
-    #         pnt=geometry.Point(xy)
-    #         j_ll[i,0]=center.project(pnt)
-    #         j_ll[i,1]=pnt.distance(center.interpolate(j_ll[i,0]))
+        # Get the streamwise/cross coordinates
+        j_ll=np.zeros( (len(edge_mask),2), np.float64)
+        for i,xy in enumerate(j_xy):
+            pnt=geometry.Point(xy)
+            j_ll[i,0]=center.project(pnt)
+            j_ll[i,1]=pnt.distance(center.interpolate(j_ll[i,0]))
         
-    #     # Edges intersected by the centerline get exactly y=0
-    #     # to help make sure there is always conveyance
-    #     is_thalweg=self.grid.select_edges_intersecting(center,mask=edge_mask)
-    #     j_thalweg=is_thalweg[edge_mask]
-    #     j_ll[j_thalweg,1]=0.0
+        # Edges intersected by the centerline get exactly y=0
+        # to help make sure there is always conveyance
+        is_thalweg=self.grid.select_edges_intersecting(center,mask=edge_mask)
+        j_thalweg=is_thalweg[edge_mask]
+        j_ll[j_thalweg,1]=0.0
 
-    #     if plot: 
-    #         fig=plt.figure(1)
-    #         fig.clf()
-    #         self.grid.plot_edges(color='0.5',lw=0.4)
-    #         #self.grid.plot_edges(values=j_ll[:,0],mask=edge_mask,cmap=turbo,lw=2.)
-    #         self.grid.plot_edges(values=j_ll[:,1],mask=edge_mask,cmap=turbo,lw=2.,clim=[0,30])
+        if plot: 
+            fig=plt.figure(1)
+            fig.clf()
+            self.grid.plot_edges(color='0.5',lw=0.4)
+            #self.grid.plot_edges(values=j_ll[:,0],mask=edge_mask,cmap=turbo,lw=2.)
+            self.grid.plot_edges(values=j_ll[:,1],mask=edge_mask,cmap=turbo,lw=2.,clim=[0,30])
 
-    #         plot_wkb.plot_wkb(center,color='orange')
+            plot_wkb.plot_wkb(center,color='orange')
 
-    #         plt.axis('tight')
-    #         plt.axis('equal')
-    #         plt.axis('off')
-    #         plt.axis((552070., 552178., 4124574., 4124708.))
-    #         # fig.savefig('mouth_edgy_bathy.png',dpi=150)
+            plt.axis('tight')
+            plt.axis('equal')
+            plt.axis('off')
+            plt.axis((552070., 552178., 4124574., 4124708.))
+            # fig.savefig('mouth_edgy_bathy.png',dpi=150)
 
-    #     # Do the business -- add structures
-    #     ds=self.prep_qcm_data()
-    #     # subset ds to just the run
-    #     ds=ds.isel( time=( (ds.time>=self.run_start) & (ds.time<=self.run_stop)))
+        # Do the business -- add structures
+        ds=self.prep_qcm_data()
+        # subset ds to just the run
+        ds=ds.isel( time=( (ds.time>=self.run_start) & (ds.time<=self.run_stop)))
 
-    #     qcm_width=ds.w_inlet
-    #     qcm_z_thalweg=ds.z_thalweg
+        qcm_width=ds.w_inlet
+        qcm_z_thalweg=ds.z_thalweg
 
-    #     for idx,(j,ll) in enumerate(zip(edge_mask,j_ll)):
-    #         # Try a v-shaped channel, slope set by qcm width and
-    #         # a presumed 1m edge-of-channel relief
+        for idx,(j,ll) in enumerate(zip(edge_mask,j_ll)):
+            # Try a v-shaped channel, slope set by qcm width and
+            # a presumed 1m edge-of-channel relief
 
-    #         # This was still too frictional
-    #         # crest=qcm_z_thalweg + 1.0*(ll[1])/(qcm_width/2)
+            # This was still too frictional
+            # crest=qcm_z_thalweg + 1.0*(ll[1])/(qcm_width/2)
 
-    #         # Try something more like a trapezoidal channel
-    #         l_flat=7 # half-width of the flat bottom
-    #         z_scale=1.0
-    #         z_offset=-0.10
-    #         crest=qcm_z_thalweg + z_offset + z_scale*max(0,(ll[1]-l_flat))/(qcm_width/2)
+            # Try something more like a trapezoidal channel
+            l_flat=7 # half-width of the flat bottom
+            z_scale=1.0
+            z_offset=-0.10
+            crest=qcm_z_thalweg + z_offset + z_scale*max(0,(ll[1]-l_flat))/(qcm_width/2)
             
-    #         self.add_Structure(
-    #             type='generalstructure',
-    #             geom=self.grid.nodes['x'][self.grid.edges['nodes'][j]],
-    #             name='mouth_%04d'%idx,
-    #             CrestLevel=crest,	# Bed level at centre of structure (m AD)
-    #             extraresistance=0,                   	# Extra resistance (-)
-    #             GateOpeningWidth=100.0,                 	# Horizontal opening width between the doors (m)
-    #         )        
+            self.add_Structure(
+                type='generalstructure',
+                geom=self.grid.nodes['x'][self.grid.edges['nodes'][j]],
+                name='mouth_%04d'%idx,
+                CrestLevel=crest,	# Bed level at centre of structure (m AD)
+                extraresistance=0,                   	# Extra resistance (-)
+                GateOpeningWidth=100.0,                 	# Horizontal opening width between the doors (m)
+            )        
 
 
 class PescaButano(PescaButanoBase):
@@ -701,10 +695,10 @@ class PescaButano(PescaButanoBase):
     def prep_qcm_data(self):
         '''load QCM output and prepare xr dataset'''
         if self.ds_qcm is None:
-            qcm_pre2016=pd.read_csv("../../../data/ESA_QCM/ESA_draft_PescaderoQCM_output.csv",
+            qcm_pre2016=pd.read_csv("../../data/ESA_QCM/ESA_draft_PescaderoQCM_output.csv",
                                     skiprows=[0],usecols=range(7),
                                     parse_dates=['Date (PST)'])
-            qcm_2016_2017=pd.read_csv("../../../data/ESA_QCM/ESA_draft_PescaderoQCM_output_4.28.2021.csv",
+            qcm_2016_2017=pd.read_csv("../../data/ESA_QCM/ESA_draft_PescaderoQCM_output_4.28.2021.csv",
                                       skiprows=[0],usecols=range(14),
                                       parse_dates=['Date (PST)'])
             # some extra rows in the csv
