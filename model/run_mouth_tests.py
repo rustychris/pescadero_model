@@ -41,20 +41,17 @@ class PescaMouthy(pesca_base.PescaButano):
         # synthetic DEM as structures
         # self.add_mouth_as_structures()
 
-        # Make a sequence of partially open gates?  nah
-
         # now just one mouth structure
-        self.add_mouth_gen_structure(name='mouth_in')
+        self.add_mouth_gen_structure(name='mouth_out')
 
 model=PescaMouthy(#run_start=np.datetime64("2016-06-09 00:00"),
                   #run_stop=np.datetime64("2016-06-20 00:00"),
                   run_start=np.datetime64("2016-12-10 00:00"),
-                  run_stop=np.datetime64("2016-12-13 06:00"),
-                  run_dir="data_mouth_v031",
+                  run_stop=np.datetime64("2016-12-20 00:00"),
+                  run_dir="data_mouth_v035",
                   salinity=False,
                   temperature=False,
                   nlayers_3d=0,
-                  # mouth_z_dredge=0,
                   pch_area=2.0)
 
 model.mdu['output','MapInterval']=1800
@@ -99,6 +96,7 @@ model.run_simulation()
 # v015: back to v013 period, a bit longer, and use new bathy 20210820
 # v016: winter breach period with mouth_as_structures. Fails during the breach 
 # v017: winter breach, back to two structures with resistance (like salt v116)
+#     seem to have deleted this one.
 # v018: longer period like v015, but with the mouth structures.
 #     appears to be identical to v015.
 
@@ -123,3 +121,9 @@ model.run_simulation()
 #      freeweircoefficients back to 1.0, and extraresistance to 0.
 # v030:  drop upstream/downstream levels. Not sure why they had gotten higher...
 # v031:  from v030, free weir coeffs to 10
+# v032:  free and drowned weir coeffs to 10.
+# v033:  test mouth_as_structures with the large flow coefficients
+#        not stable.
+# v034:  test single structure, no extraresistance, winter breach, free/drowned coeff 0.55
+#         Didn't look that great.
+# v035:  same, but use mouth_out

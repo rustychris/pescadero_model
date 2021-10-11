@@ -697,13 +697,13 @@ class PescaButano(PescaButanoBase):
             GateLowerEdgeLevel=0.2,                  	# Gate lower edge level (m AD)
             pos_freegateflowcoeff=1,                   	# Positive free gate flow (-)
             pos_drowngateflowcoeff=1,                   	# Positive drowned gate flow (-)
-            pos_freeweirflowcoeff=10.0,                   	# Positive free weir flow (-)
-            pos_drownweirflowcoeff=1,                   	# Positive drowned weir flow (-)
+            pos_freeweirflowcoeff=0.55,                   	# Positive free weir flow (-)
+            pos_drownweirflowcoeff=0.55,                   	# Positive drowned weir flow (-)
             pos_contrcoeffreegate=1,                   	# Positive flow contraction coefficient (-)
             neg_freegateflowcoeff=1,                   	# Negative free gate flow (-)
             neg_drowngateflowcoeff=1,                   	# Negative drowned gate flow (-)
-            neg_freeweirflowcoeff=10.0,                   	# Negative free weir flow (-)
-            neg_drownweirflowcoeff=1,                   	# Negative drowned weir flow (-)
+            neg_freeweirflowcoeff=0.55,                   	# Negative free weir flow (-)
+            neg_drownweirflowcoeff=0.55,                   	# Negative drowned weir flow (-)
             neg_contrcoeffreegate=1,                   	# Negative flow contraction coefficient (-)
             extraresistance=0.0,                   	# Extra resistance (-)
             GateHeight=10,                   	# Vertical gate door height (m)
@@ -724,10 +724,12 @@ class PescaButano(PescaButanoBase):
     def prep_qcm_data(self):
         '''load QCM output and prepare xr dataset'''
         if self.ds_qcm is None:
-            qcm_pre2016=pd.read_csv("../../data/ESA_QCM/ESA_draft_PescaderoQCM_output.csv",
+            qcm_pre2016=pd.read_csv(os.path.join(local_config.data_dir,
+                                                 "ESA_QCM/ESA_draft_PescaderoQCM_output.csv"),
                                     skiprows=[0],usecols=range(7),
                                     parse_dates=['Date (PST)'])
-            qcm_2016_2017=pd.read_csv("../../data/ESA_QCM/ESA_draft_PescaderoQCM_output_4.28.2021.csv",
+            qcm_2016_2017=pd.read_csv(os.path.join(local_config.data_dir,
+                                                   "ESA_QCM/ESA_draft_PescaderoQCM_output_4.28.2021.csv"),
                                       skiprows=[0],usecols=range(14),
                                       parse_dates=['Date (PST)'])
             # some extra rows in the csv
