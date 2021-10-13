@@ -16,22 +16,22 @@
   ibc = 1 !Baroclinic option
   ibtp = 0 
 
-  rnday = 5 !total run time in days
-  dt = 300. !Time step in sec
+  rnday = 1 !total run time in days
+  dt = 30. !Time step in sec
 
 ! Grid for WWM (USE_WWM)
   msc2 = 24     !same as msc in .nml ... for consitency check between SCHISM and WWM
   mdc2 = 30     !same as mdc in .nml
 
 ! Define # of tracers in tracer modules (if enabled)
-  ntracer_gen = 2 !user defined module (USE_GEN)
-  ntracer_age = 4 !age calculation (USE_AGE). Must be =2*N where N is # of age tracers
-  sed_class = 5 !SED3D (USE_SED)
+  ntracer_gen = 0 !user defined module (USE_GEN)
+  ntracer_age = 0 !age calculation (USE_AGE). Must be =2*N where N is # of age tracers
+  sed_class = 0 !SED3D (USE_SED)
   eco_class = 27 !EcoSim (USE_ECO): must be between [25,60]
 
 ! Global output controls
-  nspool = 3 !output step spool
-  ihfskip = 1440 !stack spool; every ihfskip steps will be put into 1_*, 2_*, etc...
+  nspool = 10 !output step spool
+  ihfskip = 2880 !stack spool; every ihfskip steps will be put into 1_*, 2_*, etc...
 /
 
 &OPT
@@ -155,7 +155,7 @@
 ! Reference latitude for beta-plane approximation when ncor=1 (not used if ics=2)
 !-----------------------------------------------------------------------
   slam0 = -124  !lon - not really used
-  sfea0 = 45 !lat
+  sfea0 = 38 !lat
 
 !-----------------------------------------------------------------------
 ! Baroclinicity calculation in off/nearshore. The 'below-bottom' gradient
@@ -215,7 +215,7 @@
 ! Elevation initial condition flag for cold start only. If ic_elev=1, elev.ic (in *.gr3 format) is needed
 ! to specify the initial elevations; otherwise elevation is initialized to 0 everywhere 
 !-----------------------------------------------------------------------
-  ic_elev = 0
+  ic_elev = 1
 
 !-----------------------------------------------------------------------
 ! Elevation boundary condition ramp-up flag. =0: ramp up from 0; =1: ramp up from
@@ -223,7 +223,7 @@
 ! This flag is mainly used to start the simulation from non-zero elev.
 ! The ramp-up period is same as 'dramp' below.
 !-----------------------------------------------------------------------
-  nramp_elev = 0
+  nramp_elev = 1
 
 !-----------------------------------------------------------------------
 ! Optional inverse barometric effects on the elev. b.c.
@@ -314,7 +314,7 @@
 ! have different meanings under these 2 options. Also with PetSc one can
 ! use cmd line options to choose solver etc.
 !-----------------------------------------------------------------------
-  moitn0 = 50 !output spool for solver info; used only with JCG
+  moitn0 = 1 !RH: was much higher. output spool for solver info; used only with JCG
   mxitn0 = 1500 !max. iteration allowed
   rtol0 = 1.e-12 !error tolerance
 
