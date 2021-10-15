@@ -16,7 +16,7 @@
   ibc = 1 !Baroclinic option
   ibtp = 1 ! solve transport equation (?)
 
-  rnday = 0.5 !total run time in days
+  rnday = 1.5 !total run time in days
   dt = 30. !Time step in sec
 
 ! Grid for WWM (USE_WWM)
@@ -26,7 +26,7 @@
 ! Define # of tracers in tracer modules (if enabled)
   ntracer_gen = 0 !user defined module (USE_GEN)
   ntracer_age = 0 !age calculation (USE_AGE). Must be =2*N where N is # of age tracers
-  sed_class = 0 !SED3D (USE_SED)
+  sed_class = 1 !SED3D (USE_SED)
   eco_class = 27 !EcoSim (USE_ECO): must be between [25,60]
 
 ! Global output controls

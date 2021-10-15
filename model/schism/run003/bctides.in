@@ -6,7 +6,7 @@ M2
 ZZ
 0.0 1.0 0.0
 1 nope
-33 3 0 0 0  ! turn off velocity bc at ocean
+33 3 0 2 2 3 ! turn off velocity bc at ocean. T,S, and sed relax to IC
   M2 !elevation
   0.3048  0.00
   0.3048  0.00
@@ -75,3 +75,8 @@ ZZ
   0.9000  0.00
   0.9000  0.00
   0.9000  0.00
+15. !T nudging
+1.
+33. !S nudging
+1.
+1. !sed nudging
