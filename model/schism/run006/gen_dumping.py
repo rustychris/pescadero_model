@@ -4,6 +4,7 @@ g=unstructured_grid.UnstructuredGrid.read_gr3('hgrid.gr3')
 
 ##
 # Have an entry every 5 minutes
+import numpy as np
 
 # I want to ramp up over 12 h, then ramp down for 12 h
 T=np.arange(0,24*3600,300)
@@ -21,8 +22,9 @@ z_discrete=np.interp(T,
 dz_discrete=np.r_[0,np.diff(z_discrete)]
 
 ## dz=1.0/(T>=t_start).sum()
-
+t_start=3600
 Ac=g.cells_area()
+dz=dz_discrete[0]
 
 with open('sed_dump.in','wt') as fp:
     fp.write("%g m every %g s, after t=%d\n"%(dz,T[1]-T[0],t_start))
@@ -32,7 +34,6 @@ with open('sed_dump.in','wt') as fp:
         if ti==0 or dz_discrete[ti]==0.0:
             continue
         fp.write('%g %d\n'%(t,len(elts))) # t_dump, ne_dump
-        dz=dz_discrete[ti]
         volumes=dz*Ac[elts]
         
         for i,elt in enumerate(elts):
