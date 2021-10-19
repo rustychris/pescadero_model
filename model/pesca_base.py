@@ -25,7 +25,7 @@ if not os.path.exists(cache_dir):
 
 ft_to_m=0.3048
 
-class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
+class PescaButanoBaseMixin(local_config.LocalConfig):
     """
     Base model domain, including flow structures in default 
     states.  Does not include boundary forcing.
@@ -45,8 +45,19 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
     deep_bed_layer=True # make the deepest interface at least as deep as the deepest node
     
     def __init__(self,*a,**k):
-        super(PescaButanoBase,self).__init__(*a,**k)
+        super(PescaButanoBaseMixin,self).__init__(*a,**k)
 
+        self.configure_global()
+            
+        self.set_grid_and_features()
+        self.set_bcs()
+        self.add_monitoring()
+        self.add_structures()
+        self.set_friction()
+
+        self.config_layers()
+
+    def configure_global(self):
         # No horizontal viscosity or diffusion
         self.mdu['physics','Vicouv']=0.0
         self.mdu['physics','Dicouv']=0.0
@@ -78,25 +89,17 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
             self.mdu['physics','InitialTemperature']=18.0 # rough pull from plots
         else:            
             self.mdu['physics','Temperature']=0
-
-        self.mdu['output','Wrimap_waterlevel_s0']=0 # no need for last step's water level
             
-        self.set_grid_and_features()
-        self.set_bcs()
-        self.add_monitoring()
-        self.add_structures()
-        self.set_friction()
-
         if self.salinity or self.temperature:
             self.mdu['physics','Idensform']=2 # UNESCO
-            # 10 sigma layers yielded nan at wetting front, and no tidal variability.
-            # 2D works fine -- seems to bring in the mouth geometry okay.
-            # Must be called after grid is set
-            self.config_layers()
         else:
             self.mdu['physics','Idensform']=0 # no density effects
-        
-    def update_initial_water_level(self):
+
+            
+        self.mdu['output','Wrimap_waterlevel_s0']=0 # no need for last step's water level
+
+            
+    def infer_initial_water_level(self):
         """
         Set initial water level to qcm lagoon data, unless
         outside qcm coverage in which case use the BC.
@@ -105,11 +108,10 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
         if self.run_start>ds.time.min() and self.run_start<ds.time.max():
             tidx=np.searchsorted(ds.time,self.run_start)
             z_init=ds['z_lagoon'].values[tidx]
-            self.mdu['geometry','WaterLevIni']=z_init
-            self.log.info('Overwriting the initial water level to %.3f'%z_init)
+            return z_init
         else:
             self.log.warning("QCM doesn't cover initial condition, fall back to BC")
-            super(PescaButanoBase,self).update_initial_water_level()
+            return super(PescaButanoBaseMixin,self).infer_initial_water_level()
             
     def set_grid_and_features(self):
         # For now the only difference is the DEM. If they diverge, might go
@@ -156,8 +158,16 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
         """
         Handle layer-related config, separated into its own method to
         make it easier to specialize in subclasses.
-        Only called for 3D runs.
+        Now called for 2D and 3D alike
         """
+        if (not self.salinity) and (not self.temperature):
+            self.mdu['geometry','Kmx']=0 # 2D run
+            return
+        
+        # 10 sigma layers yielded nan at wetting front, and no tidal variability.
+        # 2D works fine -- seems to bring in the mouth geometry okay.
+        # Must be called after grid is set
+                
         self.mdu['geometry','Kmx']=self.nlayers_3d # number of layers
         self.mdu['geometry','LayerType']=2 # all z layers
         self.mdu['geometry','ZlayBot']=self.z_min
@@ -495,7 +505,7 @@ class PescaButanoBase(local_config.LocalConfig,dfm.DFlowModel):
             )        
 
 
-class PescaButano(PescaButanoBase):
+class PescaButanoMixin(PescaButanoBaseMixin):
     """ Add realistic boundary conditions to base Pescadero model
     """
     def set_bcs(self):
@@ -745,3 +755,5 @@ class PescaButano(PescaButanoBase):
             
         return self.ds_qcm
         
+class PescaButano(PescaButanoMixin,dfm.DFlowModel):
+    pass

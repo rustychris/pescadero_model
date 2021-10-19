@@ -42,6 +42,10 @@ with open('sed_dump.in','wt') as fp:
         
 ## 
 # Also create bed_frac, SED_hvar initial conditions.
+g.write_gr3('elev.ic',z=np.maximum(g.nodes['node_z_bed'],0.5),bc_marks=False)
+g.write_gr3('drag.gr3',z=0.01) # too large, but a start.
+
+
 g.write_gr3('bed_frac_1.ic',z=1.0) # one sediment class, 100%
 g.write_gr3('SED_hvar_1.ic',z=0.0) # no bed sediments in IC
 g.write_gr3('salt.ic',z=0.0) # fresh

@@ -1,6 +1,8 @@
-SED_hvar_1.ic
 *.ic
 *.gr3
 sed_dump.in
 tvd.prop
+station.bp.*
 station.in
+tvd.prop
+
