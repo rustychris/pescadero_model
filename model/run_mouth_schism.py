@@ -47,15 +47,10 @@ model=PescaMouthy(run_start=np.datetime64("2016-06-09 00:00"),
                   #run_stop=np.datetime64("2016-12-20 00:00"),
                   #run_start=np.datetime64("2019-02-10 00:00"),
                   #run_stop=np.datetime64("2019-02-20 00:00"),
-                  run_dir="data_schmouth_v020",
+                  run_dir="data_schmouth_v024",
                   salinity=False,
                   temperature=False,
                   nlayers_3d=0)
-
-# model.mdu['output','MapInterval']=1800
-# model.mdu['time','DtUser']=30.
-# model.mdu['numerics','CFLmax']=0.4
-# model.mdu['time','AutoTimestepNoStruct']=1
 
 model.write()
 
@@ -64,3 +59,8 @@ shutil.copyfile("pesca_base.py",os.path.join(model.run_dir,"pesca_base.py"))
 model.partition()
 model.run_simulation()
 
+# v020: ran, not too bad, but sed_dump was missing header line, no morph
+# v021: fix header line...
+# v022: patch schism to allow negative element=>elevation adjustment at node.
+# v023: finer output time, finer morph update.
+# v024: much longer mouth, and bump up friction to 0.01

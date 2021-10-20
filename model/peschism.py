@@ -1,5 +1,6 @@
 import pesca_base
 import numpy as np
+from shapely import wkt
 import os
 import stompy.model.schism.schism_model as sch
 import stompy.model.hydro_model as hm
@@ -23,7 +24,8 @@ class PescaSchism(pesca_base.PescaButanoMixin,sch.SchismModel):
     def set_friction(self):
         # SCHISM takes friction at nodes
         # For the moment just set a constant global Cd
-        self.grid.add_node_field('drag', 0.003*np.ones(self.grid.Nnodes()))
+        # Started with 0.003, but was not frictional enough (or mouth was too open)
+        self.grid.add_node_field('drag', 0.010*np.ones(self.grid.Nnodes()))
         
     def configure_global(self):
         # No horizontal viscosity or diffusion
@@ -39,7 +41,10 @@ class PescaSchism(pesca_base.PescaButanoMixin,sch.SchismModel):
         # For starters stick to no transport -- focus on tidal cal
         self.param['CORE','ibc']=1  # disable baroclinic
         self.param['CORE','ibtp']=1 # enable scalar transport
-        self.param['CORE','dt']=20 # probably okay for barotropic run. 4s for baroclinic
+        dt=20
+        self.param['CORE','dt']=dt # probably okay for barotropic run. 4s for baroclinic
+        self.param['CORE','nspool']=int(3600/dt) # hourly for now
+        self.param['SCHOUT','nspool_sta']=int(6*60/dt) # 6 minutes
 
     def config_layers(self):
         self.param['CORE','ibc']=1  # disable baroclinic
@@ -92,38 +97,58 @@ S levels
 
     # This forms a bank-to-bank line near the mouth
     # These are 0-based
-    morph_elts=np.array(list(range(10556,10570+1))+[61378,61379,61377,61376])
+    # morph_elts=np.array(list(range(10556,10570+1))+[61378,61379,61377,61376])
+
+    morph_wkt="""Polygon ((552076.7757061361335218 4124658.43376859556883574, 552077.55741135939024389 4124662.18595366738736629,
+552092.0971285121049732 4124667.6578902299515903, 552127.74288669310044497 4124687.51320290099829435, 552134.30921056855004281 4124642.33064099634066224, 552070.67840539466124028 4124606.99756490439176559, 552076.7757061361335218 4124658.43376859556883574))"""
+    
     def write_inlet_morpho(self):
+        apply_to_nodes=True # patched schism -- applies dumping as dz at nodes when index is negative
+        
         ds=self.prep_qcm_data()
 
-        elts=self.morph_elts
+        # Too lazy to push this into shapefile
+        morph_poly=wkt.loads(self.morph_wkt)
 
-        # Update dumping every 0.5h
-        dump_dt_s=1800
+        # Update dumping every 15 min
+        dump_dt_s=900
         sim_seconds=(self.run_stop-self.run_start)/np.timedelta64(1,'s')
         # start at t=0 but we won't output dumping at t=0
         dump_t=np.arange(0,sim_seconds+dump_dt_s,dump_dt_s)
 
-        # target elevation of the cells
+        # target elevation
         z_thalweg=np.interp( utils.to_unix(self.run_start)+dump_t,
-                             utils.to_unix(ds.time.values),ds['z_thalweg'])
-        # For now, the same z_target for all elements
-        z_target=np.zeros( (len(dump_t),len(elts)), np.float64)
-        
-        # A little tricky to figure out ground elevation -- bathy is at nodes.
-        # take average to estimate element bathy
-        z_cells=self.grid.interp_node_to_cell(self.grid.nodes['node_z_bed'])
-        z_bed=z_cells[elts]
+                             utils.to_unix(ds.time.values),ds['z_thalweg'].values)
 
+        if apply_to_nodes:
+            self.morph_nodes=self.grid.select_nodes_intersecting(morph_poly,as_type='indices')
+            #nodes=np.unique( np.concatenate([self.grid.cell_to_nodes(c) for c in elts]))
+            nodes=self.morph_nodes
+            area=np.ones(len(nodes)) # direct elevation, so no area adjustment
+            elts1=-(nodes+1) # negate and to 1-based
+            z_bed=self.grid.nodes['node_z_bed'][nodes]
+        else:
+            self.morph_elts=self.grid.select_cells_intersecting(morph_poly,as_type='indices') 
+            elts=self.morph_elts
+            area=self.grid.cells_area()[elts]
+            # A little tricky to figure out ground elevation -- bathy is at nodes.
+            # take average to estimate element bathy
+            z_cells=self.grid.interp_node_to_cell(self.grid.nodes['node_z_bed'])
+            z_bed=z_cells[elts]
+            elts1=1+elts # 1-based
+            
+        # For now, the same z_target for all elements
+        z_target=np.zeros( (len(dump_t),len(elts1)), np.float64)
         z_target[:,:]=np.maximum( z_thalweg[:,None], # broadcast the same target over all elements
                                   z_bed[None,:] ) # broadcast bathy over all time
+        z_target=np.round_(z_target, 3) # Don't care about sub-mm variation. just makes the files bigger.
+
         z_target[0,:]=z_bed # initial condition
 
         dz_target=np.diff(z_target,axis=0)
 
-        area=self.grid.cells_area()[elts]
-
         with open(os.path.join(self.run_dir,'sed_dump.in'),'wt') as fp:
+            fp.write("from QCM, update elevation every %s s\n"%dump_dt_s)
             # Possible bug in sediment.F90 when the simulation starts on or before
             # the time of the first dump record.
             # Here skip first dump_t, which is the initial condition, such that
@@ -134,12 +159,12 @@ S levels
                 active=(dzs!=0.0)
                 if not np.any(active):
                     continue
-                active_elts=elts[active]
-                fp.write('%g %d\n'%(t,len(active_elts))) # t_dump, ne_dump
+                active_elts1=elts1[active]
+                fp.write('%g %d\n'%(t,len(active_elts1))) # t_dump, ne_dump
                 dVs=(dzs*area)[active]
 
-                for elt,dV in zip(active_elts,dVs):
+                for elt1,dV in zip(active_elts1,dVs):
                     # read(18,*)(ie_dump(l),vol_dump(l),l=1,ne_dump)
                     # to 1-based
-                    fp.write('%d %.4f\n'%(elt+1,dV))
+                    fp.write('%d %.4f\n'%(elt1,dV))
 
