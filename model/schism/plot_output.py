@@ -9,7 +9,7 @@ import stompy.plot.cmap as scmap
 from stompy import utils
 
 turbo=scmap.load_gradient('turbo.cpt')
-
+## 
 import six
 six.moves.reload_module(multi_ugrid)
 
@@ -223,3 +223,24 @@ for i in range(1,29):
         ax.text(0.1,0.1,str(t), transform=ax.transAxes)
         fig.canvas.draw()
         plt.pause(0.01)
+##
+
+import stompy.model.schism.schism_model as sch
+
+model=sch.SchismModel.load('schism/run003')
+
+ms=model.map_output(1)
+##
+
+plt.figure(1).clf()
+fig,ax=plt.subplots(num=1)
+
+ms.grid.plot_edges(color='k',lw=0.3)
+
+#ms.grid.contourf_node_values(ms['elev'].isel(time=35).values,
+#                             np.linspace(0.4,1.5,50),cmap=turbo)
+
+ms.grid.contourf_node_values(ms['zcor'].isel(time=35,nSCHISM_vgrid_layers=0).values,
+                             np.linspace(0.0,1.5,50),cmap=turbo)
+
+ax.axis( (552018.8933133289, 552232.6829957409, 4124518.199465297, 4124757.140875052))
