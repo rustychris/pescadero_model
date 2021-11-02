@@ -45,9 +45,7 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
     nlayers_3d=14 # 0.25m layers for z_min/max above
     deep_bed_layer=True # make the deepest interface at least as deep as the deepest node
     
-    def __init__(self,*a,**k):
-        super(PescaButanoBaseMixin,self).__init__(*a,**k)
-
+    def configure(self):
         self.configure_global()
             
         self.set_grid_and_features()
@@ -59,6 +57,9 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
         self.config_layers()
 
     def configure_global(self):
+        """
+        global, DFM-specific settings
+        """
         # No horizontal viscosity or diffusion
         self.mdu['physics','Vicouv']=0.0
         self.mdu['physics','Dicouv']=0.0
@@ -250,7 +251,7 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
         # Features labeled 'section' are for sampled transects
         self.add_monitor_sections(self.match_gazetteer(geom_type='LineString',type='transect'))
         self.add_monitor_transects(self.match_gazetteer(geom_type='LineString',type='section'),
-                                   dx=5.0)
+                                   dx=10.0)
 
     def add_structures(self):
         self.add_pch_structure()
