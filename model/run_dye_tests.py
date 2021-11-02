@@ -154,6 +154,12 @@ class PescaDye(pesca_base.PescaButano):
             print(exc.output.decode())
             raise
 
+    def set_grid_and_features(self):
+        super(PescaDye,self).set_grid_and_features()
+        # After the fact switch to Sophie's grid
+        import local_config
+        grid_dir=os.path.join(local_config.model_dir,"../grids/pesca_butano_v03")
+        self.set_grid(os.path.join(grid_dir, f"pesca_butano_{self.terrain}_deep_bathy_mod3.nc"))
         
 
 ## This set up for tidal conditions July 2016 (16 days), use extraresistance=8
@@ -184,17 +190,24 @@ class PescaDye(pesca_base.PescaButano):
 #     # Should get us under 1GB.
 #     model.run_stop=np.datetime64("2017-07-31 00:00")
 
-run_dir_a="run_dye_test-v10a"
-run_dir_b="run_dye_test-v10b"
+# v10a,b: worked, though still fairly porous
+# v11a,b: a few more levee features
+# v12a,b: use Sophie's grid. A bit better, but not great.
+#         Matches high water with both v11 and QCM, low water not nearly
+#         as low as QCM, though. What little observations there are look
+#         entirely different than QCM.
+# v13a,b: back to 2016-12-10 breach
+run_dir_a="run_dye_test-v13a"
+run_dir_b="run_dye_test-v13b"
 
 if PescaDye.run_completed(run_dir_a):
     print("Looks like first phase, %s, has completed"%run_dir_a)
 else:
     # This set up for breaching condition December 2016 (19 days), use extraresistance=1
-    model=PescaDye(#run_start=np.datetime64("2016-12-10 00:00"),
-                   #run_stop=np.datetime64("2016-12-10 06:00"),
-                   run_start=np.datetime64("2016-03-06 00:00"),
-                   run_stop=np.datetime64("2016-03-06 01:00"),        
+    model=PescaDye(run_start=np.datetime64("2016-12-10 00:00"),
+                   run_stop=np.datetime64("2016-12-10 06:00"),
+                   #run_start=np.datetime64("2016-03-06 00:00"),
+                   #run_stop=np.datetime64("2016-03-06 01:00"),        
                    run_dir=run_dir_a,
                    salinity=False,
                    temperature=False,
@@ -204,7 +217,7 @@ else:
     model.run_simulation()
 
 model0=PescaDye.load(run_dir_a)
-model=PescaDye(restart_from=model0, run_stop=np.datetime64("2016-03-16 00:00"),
+model=PescaDye(restart_from=model0, run_stop=np.datetime64("2016-12-17 00:00"),
                run_dir=run_dir_b,
                # restart logic is not smart enough to copy these over
                # and load does not populate them in model0
@@ -213,13 +226,6 @@ model=PescaDye(restart_from=model0, run_stop=np.datetime64("2016-03-16 00:00"),
                extraresistance=1)
 
 # Update initial condition to set tracer distributions
-# from shapely import wkt
-# geom_pond=wkt.loads("""
-# Polygon ((552383.34861707373056561 4125427.25597652513533831, 552763.36952434584964067 4125327.15290826791897416, 552650.29013242584187537 4124880.39662215765565634, 552367.89995048881974071 4124849.38305645436048508, 552359.01925187720917165 4124845.71494181035086513, 552318.86304945999290794 4124846.29411780694499612, 552309.59623351763002574 4124863.86245636455714703, 552283.65815424337051809 4124973.17293330701068044, 552383.34861707373056561 4125427.25597652513533831))
-# """)
-# geom_marsh=wkt.loads("""
-# Polygon ((552347.1433694192674011 4124820.05416368413716555, 552369.6099838245427236 4124847.5133590679615736, 552690.38331172126345336 4124855.00223053665831685, 553393.08908450661692768 4124760.14319193689152598, 553260.78568856487981975 4124131.07798859057947993, 553202.12286206230055541 4124128.58169810101389885, 553148.45261653873603791 4124214.70371998799964786, 553128.71429060690570623 4124243.9996137204580009, 553101.02309723885264248 4124278.3591274693608284, 553070.60594112263061106 4124304.12912318715825677, 553034.7303514409577474 4124324.84601300302892923, 552955.39982214488554746 4124352.63696275651454926, 552885.16451276815496385 4124372.84856257727369666, 552819.98210334661416709 4124394.57603238429874182, 552760.92278280120808631 4124414.22047343384474516, 552709.45051059569232166 4124419.99022666038945317, 552642.49100604513660073 4124424.39345938619226217, 552619.86749997257720679 4124424.39345938619226217, 552614.24645179242361337 4124460.58833320066332817, 552520.63555843732319772 4124480.55865711625665426, 552461.9727319348603487 4124546.71035508718341589, 552372.10627431399188936 4124651.5545556447468698, 552353.38409564294852316 4124733.93214179715141654, 552342.15078844036906958 4124772.62464438425377011, 552347.1433694192674011 4124820.05416368413716555))
-# """)
 
 geom_marsh=model.get_geometry(desc='marsh',type='dye')
 geom_pond =model.get_geometry(desc='pond',type='dye')
