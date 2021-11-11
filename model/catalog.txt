@@ -448,4 +448,10 @@ run_salt_20160520-v116 (farm)
 run_salt_20160520-v117 (farm)
   100 structures. 2D was promising...
 
-
+data_salt_filling-v00
+  Had the default viscosity settings, way too mixed.
+  
+data_salt_filling-v01
+  Fix viscosity settings (to run_salt_2016_2017 values), and
+  extend to very long run.
+  

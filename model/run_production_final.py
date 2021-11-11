@@ -14,7 +14,7 @@ import numpy as np
 from stompy.model import hydro_model
 from stompy.model.delft import dflow_model
 from stompy.grid import unstructured_grid
-import subprocess
+import subprocess, shutil
 
 class PescaChgMouth(pesca_base.PescaButano):
     extraresistance=8.0
@@ -108,40 +108,39 @@ class PescaChgMouth(pesca_base.PescaButano):
 #                               temperature=False,
 #                               extraresistance=8)
 
-# This set up for tidal condition July 2017 (31 days), use extraresistance=8
-model=PescaChgMouth(run_start=np.datetime64("2017-07-15 00:00"),
-                    run_stop=np.datetime64("2017-08-15 00:00"),
-                    run_dir="run_tide_test-p08",
-                    salinity=False,
-                    temperature=False,
+# # This set up for tidal condition July 2017 (31 days), use extraresistance=8
+# model=PescaChgMouth(run_start=np.datetime64("2017-07-15 00:00"),
+#                     run_stop=np.datetime64("2017-08-15 00:00"),
+#                     run_dir="run_tide_test-p08",
+#                     salinity=False,
+#                     temperature=False,
+#                     extraresistance=8)
+
+# This set up for tidal to closed with salinity July-August 2016, assuming extraresistance=8
+# 40 days was 30G of output.
+# This is 3x longer.
+model=PescaChgMouth(run_start=np.datetime64("2016-07-25 00:00"),
+                    run_stop=np.datetime64("2016-12-16 00:00"),
+                    run_dir="data_salt_filling-v01",
+                    salinity=True,
+                    temperature=True,
+                    nlayers_3d=100,
+                    z_max=3.0,z_min=-0.5,
                     extraresistance=8)
 
-if 1:
-    # Adjust for getting inundation maps
-    # 1 month of 12h output was 620M
-    # half the duration
-    # bump the frequency by factor of 24
-    # that's at 6GB?
-    # There are 14 time-varying map outputs
-    # Can disable most of those, really just care about water level,
-    # maybe bed stress.
-    # Should get us under 1GB.
+# For long run, pare down the output even more
+# restarts were 10G, should now be 4G
+model.mdu['output','RstInterval']=10*86400 # 345600
+# maps were 12G, should now be 3G
+model.mdu['output','MapInterval']=2*86400
+# history was 6G, and stays about the same.
+model.mdu['output','Wrihis_temperature']=0
+
+if 0:
+    # Adjustments for getting inundation maps 
+    model.mdu['output','Wrimap_numlimdt']=0 #= 1  # Write the number times a cell was Courant limiting to map file (1: yes, 0: no)
     model.run_stop=np.datetime64("2017-07-31 00:00")
-    
     model.mdu['output','MapInterval']=1800
-    model.mdu['output','Wrimap_velocity_component_u0']=0 #      = 1                   # Write velocity component for previous time step to map file (1: yes, 0: no)
-    model.mdu['output','Wrimap_velocity_component_u1']=0 #      = 1                   # Write velocity component to map file (1: yes, 0: no)
-    model.mdu['output','Wrimap_velocity_vector']=0 #            = 1                   # Write cell-center velocity vectors to map file (1: yes, 0: no)
-    model.mdu['output','Wrimap_upward_velocity_component']=0 #  = 1                   # Write upward velocity component on cell interfaces (1: yes, 0: no)
-    model.mdu['output','Wrimap_density_rho']=0 #                = 1                   # Write flow density to map file (1: yes, 0: no)
-    model.mdu['output','Wrimap_horizontal_viscosity_viu']=0 #   = 1                   # Write horizontal viscosity to map file (1: yes, 0: no)
-    model.mdu['output','Wrimap_horizontal_diffusivity_diu']=0 # = 1                   # Write horizontal diffusivity to map file (1: yes, 0: no)
-    model.mdu['output','Wrimap_flow_flux_q1']=0 #               = 1                   # Write flow flux to map file (1: yes, 0: no)
-    model.mdu['output','Wrimap_spiral_flow']=0 #                = 1                   # Write spiral flow to map file (1: yes, 0: no)
-    model.mdu['output','Wrimap_numlimdt']=0 #                   = 1                   # Write the number times a cell was Courant limiting to map file (1: yes, 0: no)
-    model.mdu['output','Wrimap_chezy']=0 #                      = 1                   # Write the chezy roughness to map file (1: yes, 0: no)
-    model.mdu['output','Wrimap_turbulence']=0 #                 = 1                   # Write vicww, k and eps to map file (1: yes, 0: no)
-    model.mdu['output','Wrimap_wind']=0 #                       = 1                   # Write wind velocities to map file (1: yes, 0: no)
         
 # # This set up for breaching condition December 2016 (19 days), use extraresistance=1
 # model=PescaChgMouth(run_start=np.datetime64("2016-12-10 00:00"),
@@ -157,6 +156,10 @@ if 1:
 
 model.mdu
 model.write()
+
+shutil.copyfile(__file__,os.path.join(model.run_dir,"script.py"))
+shutil.copyfile("pesca_base.py",os.path.join(model.run_dir,"pesca_base.py"))
+
 model.partition()
 
 try:
