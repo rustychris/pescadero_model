@@ -39,12 +39,7 @@ model=PescaDeeper(run_start=np.datetime64("2016-06-10 00:00"),
                   z_min=-0.5,
                   num_procs=16)
 
-# model.mdu['time','AutoTimestep']=2 # 5=bad. 4 okay but slower, seems no better than 2.
 model.mdu['output','MapInterval']=12*3600
-
-model.mdu['numerics','TurbulenceModel']=3 # 0: breaks, 1: constant,  3: k-eps
-model.mdu['physics','Dicoww']=1e-8
-model.mdu['physics','Vicoww']=1e-7
 
 #model.mdu['numerics','Vertadvtypsal']=4
 #model.mdu['numerics','Maxitverticalforestersal']=20

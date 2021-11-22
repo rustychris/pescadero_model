@@ -47,11 +47,15 @@ model=PescaMouthy(run_start=np.datetime64("2016-06-09 00:00"),
                   #run_stop=np.datetime64("2016-12-20 00:00"),
                   #run_start=np.datetime64("2019-02-10 00:00"),
                   #run_stop=np.datetime64("2019-02-20 00:00"),
-                  run_dir="data_schmouth_v024",
-                  salinity=False,
-                  temperature=False,
-                  nlayers_3d=0)
+                  run_dir="data_schmouth_v032",
+                  salinity=True,
+                  temperature=True,
+                  nlayers_3d=40)
 
+model.param['SCHOUT','iof_hydro(21)']=1 # eddy diffusivity
+
+model.param['OPT','mid']="'KE'" # temporary hack for string formatting
+model.param['OPT','xlsc0']=0.001  # mixing length at boundaries
 model.write()
 
 shutil.copyfile(__file__,os.path.join(model.run_dir,"script.py"))
@@ -64,3 +68,16 @@ model.run_simulation()
 # v022: patch schism to allow negative element=>elevation adjustment at node.
 # v023: finer output time, finer morph update.
 # v024: much longer mouth, and bump up friction to 0.01
+# v025: try 3d with salt and temp
+# v026: finer resolution in station output
+# v027: attempt LSC2. Runs, no improvement in strat.
+# v028: output eddy diffusivity, and enable TVD2 for all depths
+# v029: try K-epsilon
+# v030: diffmax=1e-7, xlsc0 down to 1mm.
+# v031: partial revert diffmax to 1e-5, and bump up layers to 40.
+# v032: kick off 80 layers, just in case it becomes a useful point of comparison
+#   not any different than 40.
+# revert layers to 40, undo the harsh constraints on diff.
+
+
+

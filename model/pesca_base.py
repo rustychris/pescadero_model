@@ -11,6 +11,7 @@ from scipy.interpolate import interp1d
 from scipy.interpolate import splev, splrep
 
 import stompy.model.delft.dflow_model as dfm
+import stompy.model.delft.io as dio
 import stompy.model.hydro_model as hm
 from stompy.io.local import cdip_mop
 from stompy import utils, filters
@@ -44,9 +45,8 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
     nlayers_3d=14 # 0.25m layers for z_min/max above
     deep_bed_layer=True # make the deepest interface at least as deep as the deepest node
     
-    def __init__(self,*a,**k):
-        super(PescaButanoBaseMixin,self).__init__(*a,**k)
-
+    def configure(self):
+        super(PescaButanoBaseMixin,self).configure()
         self.configure_global()
             
         self.set_grid_and_features()
@@ -58,6 +58,9 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
         self.config_layers()
 
     def configure_global(self):
+        """
+        global, DFM-specific settings
+        """
         # No horizontal viscosity or diffusion
         self.mdu['physics','Vicouv']=0.0
         self.mdu['physics','Dicouv']=0.0
@@ -92,13 +95,27 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
             
         if self.salinity or self.temperature:
             self.mdu['physics','Idensform']=2 # UNESCO
+            self.mdu['numerics','TurbulenceModel']=3 # 0: breaks, 1: constant,  3: k-eps
+            self.mdu['physics','Dicoww']=1e-8
+            self.mdu['physics','Vicoww']=1e-7
         else:
             self.mdu['physics','Idensform']=0 # no density effects
 
-            
+        # Trim the map output down to keep files smaller
         self.mdu['output','Wrimap_waterlevel_s0']=0 # no need for last step's water level
+        self.mdu['output','Wrimap_velocity_component_u0']=0 #        # Write velocity component for previous time step to map file (1: yes, 0: no)
+        self.mdu['output','Wrimap_velocity_component_u1']=0 #        # Write velocity component to map file (1: yes, 0: no)
+        self.mdu['output','Wrimap_velocity_vector']=0 #              # Write cell-center velocity vectors to map file (1: yes, 0: no)
+        self.mdu['output','Wrimap_upward_velocity_component']=0 #    # Write upward velocity component on cell interfaces (1: yes, 0: no)
+        self.mdu['output','Wrimap_density_rho']=0 #                  # Write flow density to map file (1: yes, 0: no)
+        self.mdu['output','Wrimap_horizontal_viscosity_viu']=0 #     # Write horizontal viscosity to map file (1: yes, 0: no)
+        self.mdu['output','Wrimap_horizontal_diffusivity_diu']=0 #   # Write horizontal diffusivity to map file (1: yes, 0: no)
+        self.mdu['output','Wrimap_flow_flux_q1']=0 #                 # Write flow flux to map file (1: yes, 0: no)
+        self.mdu['output','Wrimap_spiral_flow']=0 #                  # Write spiral flow to map file (1: yes, 0: no)
+        self.mdu['output','Wrimap_chezy']=0 #                        # Write the chezy roughness to map file (1: yes, 0: no)
+        self.mdu['output','Wrimap_turbulence']=0 #                   # Write vicww, k and eps to map file (1: yes, 0: no)
+        self.mdu['output','Wrimap_wind']=0 #                         # Write wind velocities to map file (1: yes, 0: no)
 
-            
     def infer_initial_water_level(self):
         """
         Set initial water level to qcm lagoon data, unless
@@ -121,6 +138,13 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
         self.add_gazetteer(os.path.join(grid_dir,"line_features.shp"))
         self.add_gazetteer(os.path.join(grid_dir,"point_features.shp"))
         self.add_gazetteer(os.path.join(grid_dir,"polygon_features.shp"))
+
+        # Check for and install fixed_weirs
+        fixed_weir_fn=os.path.join(grid_dir,f"fixed_weirs-{self.terrain}.pliz")
+        if os.path.exists(fixed_weir_fn):
+            self.fixed_weirs=dio.read_pli(fixed_weir_fn)
+        else:
+            self.log.warning(f"No fixed weir found ({fixed_weir_fn})")
 
     def friction_geometries(self):
         return self.match_gazetteer(geom_type='Polygon',type=type)
@@ -242,7 +266,7 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
         # Features labeled 'section' are for sampled transects
         self.add_monitor_sections(self.match_gazetteer(geom_type='LineString',type='transect'))
         self.add_monitor_transects(self.match_gazetteer(geom_type='LineString',type='section'),
-                                   dx=5.0)
+                                   dx=20.0)
 
     def add_structures(self):
         self.add_pch_structure()

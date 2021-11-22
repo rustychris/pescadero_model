@@ -12,14 +12,6 @@ six.moves.reload_module(sch)
 class PescaSchism(pesca_base.PescaButanoMixin,sch.SchismModel):
     salinity=False
     temperature=False
-    # def __init__(self,*a,**k):
-    #     super(PescaSchism,self).__init__(*a,**k)
-    #     
-    #     self.set_grid_and_features()
-    #     self.set_bcs()
-    #     self.add_monitoring()
-    #     self.add_structures()
-    #     self.set_friction()
 
     def set_friction(self):
         # SCHISM takes friction at nodes
@@ -38,26 +30,69 @@ class PescaSchism(pesca_base.PescaButanoMixin,sch.SchismModel):
 
         # self.mdu['physics','UnifFrictCoef']=0.023 # just standard value.
 
-        # For starters stick to no transport -- focus on tidal cal
-        self.param['CORE','ibc']=1  # disable baroclinic
+        if self.nlayers_3d>1:
+            self.param['CORE','ibc']=0  # enable baroclinic
+        else:
+            self.param['CORE','ibc']=1  # disable baroclinic
+            
         self.param['CORE','ibtp']=1 # enable scalar transport
-        dt=20
+        if self.nlayers_3d<=2:
+            dt=20 # 2D runs stable and fast with dt=20
+        else:
+            dt=4 # 3D runs stable up to dt=4.
         self.param['CORE','dt']=dt # probably okay for barotropic run. 4s for baroclinic
         self.param['CORE','nspool']=int(3600/dt) # hourly for now
         self.param['SCHOUT','nspool_sta']=int(6*60/dt) # 6 minutes
+        self.param['OPT','itr_met']=3 # TVD2, for space and time
+        self.param['OPT','h_tvd']=0 # Use tvd everywhere, even in shallow areas
 
     def config_layers(self):
-        self.param['CORE','ibc']=1  # disable baroclinic
+        # SCHISM is more level-focused, so I think there are always
+        # at least two, representing the bottom and top of the
+        # water column
+        # For Pescadero, basically limited to sigma or local sigma.
+        # self.config_layers_sigma()
+        self.config_layers_local_sigma()
+        
+    def config_layers_local_sigma(self):
+        n_level=max(2,self.nlayers_3d)
 
-        self.vgrid_in="""2 !ivcor
-2 1 1.e6 !nvrt, kz (# of Z-levels); h_s (transition depth between S and Z)
+        sigmas=np.linspace(-1,0,n_level)
+        sigma_str="\n".join(["%3d %.5f"%(1+i,sigma) for i,sigma in enumerate(sigmas)])
+        
+        vgrid_lines=["1 !ivcor",
+                     f"{n_level} !nvrt"]
+        eta_nom=2.5
+        depth_nom=eta_nom - self.grid.nodes['node_z_bed']
+        dz=depth_nom.max()/(n_level-1)
+        n_levels=(1+depth_nom/dz).astype(np.int32).clip(2,n_level)
+        bed_index=n_level-n_levels+1
+        
+        for i in range(self.grid.Nnodes()):
+            # Each line is node index from 1, bottom level index, and sigma coordinates from -1 to 0
+            sig=np.linspace(-1,0,n_levels[i])
+            sigmas=" ".join(["%.3f"%s for s in sig])
+            line=f"{i+1} {bed_index[i]} {sigmas}"
+            vgrid_lines.append(line)
+        self.vgrid_in="\n".join(vgrid_lines)
+        self.monitor_z=np.linspace(0,2.0,11)
+        
+    def config_layers_sigma(self):
+        n_level=max(2,self.nlayers_3d)
+
+        sigmas=np.linspace(-1,0,n_level)
+        sigma_str="\n".join(["%3d %.5f"%(1+i,sigma) for i,sigma in enumerate(sigmas)])
+        
+        self.vgrid_in=f"""2 !ivcor
+{n_level} 1 1.e6 !nvrt, kz (# of Z-levels); h_s (transition depth between S and Z)
 Z levels
 1  -1.e6
 S levels
 40. 1. 1.e-4  !h_c, theta_b, theta_f
-   1    -1.
-   2    0.
+{sigma_str}
 """
+        self.monitor_z=np.linspace(0,2.0,21)
+        
     def write_forcing(self):
         # Force a dredge depth on all open boundaries
         for bc in self.bcs:
@@ -82,8 +117,11 @@ S levels
         # sets imnp per node. Can probably set to 0.0?
         g.write_gr3(os.path.join(self.run_dir,'imorphogrid.gr3'),z=1.0)
 
+        # only dips below 1e-6 very near boundaries. seems there is something internal
+        # forcing it up to 1e-6 in most of the flow.
         g.write_gr3(os.path.join(self.run_dir,'diffmin.gr3'),z=1e-8)
-        g.write_gr3(os.path.join(self.run_dir,'diffmax.gr3'),z=1e-4)
+        # When diffmax ==1e-7, output showed diff=0.0 everywhere
+        g.write_gr3(os.path.join(self.run_dir,'diffmax.gr3'),z=1.0)
 
         with open(os.path.join(self.run_dir,'vgrid.in'),'wt') as fp:
             fp.write(self.vgrid_in)
