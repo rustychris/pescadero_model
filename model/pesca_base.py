@@ -716,10 +716,10 @@ class PescaButano(PescaButanoBase):
     def set_atmospheric_bcs(self):
         ds=self.prep_qcm_data()
 
-        ET_mm_hr=ds['evapotr_mmhour']
+        ET_mm_hr=ds['evapotr_mmhour'] # already negative!
         # negligible direct rain, just ET=negative rain
         
-        precip=hm.RainfallRateBC(rainfall_rate=-24*ET_mm_hr)
+        precip=hm.RainfallRateBC(rainfall_rate=24*ET_mm_hr)
         self.add_bcs([precip])
         
     ds_qcm=None
@@ -760,7 +760,7 @@ class PescaButano(PescaButanoBase):
             qcm['seepage_abs']=qcm['seepage']*-1 # need to be in absolute values
             qcm.loc[qcm['seepage_abs'] < 0,'seepage_abs'] = 0 # removing seepage from ocean to lagoon
                        
-            # Values are already [-]. Negative rainfall --> evapotranspiration
+            # Values are already negative. Negative rainfall --> evapotranspiration
             qcm['evapotr']= qcm['Modeled ET'] * 0.02831685 # ft3/s to m3/s
             # evapotr/grid_area*1000 --> m3 to mm
             # *3600 --> s to hour

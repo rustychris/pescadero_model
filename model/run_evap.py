@@ -23,7 +23,7 @@ class PescaEvap(pesca_base.PescaButano):
 
 model=PescaEvap(run_start=np.datetime64("2016-10-01 00:00"),
                 run_stop=np.datetime64("2016-10-14 00:00"),
-                run_dir="data_evap_v001",
+                run_dir="data_evap_v002",
                 salinity=True,
                 temperature=False,
                 nlayers_3d=100,
