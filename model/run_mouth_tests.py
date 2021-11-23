@@ -33,7 +33,7 @@ class PescaMouthy(pesca_base.PescaButano):
     # Note that the salinity runs have been dropping the thalweg by 0.15 cm
     def add_mouth_structure(self):
         # Baseline:
-        super(PescaMouthy,self).add_mouth_structure()
+        # super(PescaMouthy,self).add_mouth_structure()
 
         # synthetic DEM instead of structures
         #self.add_mouth_as_bathy()
@@ -41,26 +41,25 @@ class PescaMouthy(pesca_base.PescaButano):
         # synthetic DEM as structures
         # self.add_mouth_as_structures()
 
-        # Make a sequence of partially open gates?  nah
-
         # now just one mouth structure
-        #self.add_mouth_gen_structure(name='mouth_in')
+        self.add_mouth_gen_structure(name='mouth_out')
 
-model=PescaMouthy(run_start=np.datetime64("2016-06-09 00:00"),
-                  run_stop=np.datetime64("2016-06-20 00:00"),
-                  #run_start=np.datetime64("2016-12-10 00:00"),
-                  #run_stop=np.datetime64("2016-12-20 00:00"),
-                  #run_start=np.datetime64("2019-02-10 00:00"),
-                  #run_stop=np.datetime64("2019-02-20 00:00"),
-                  run_dir="data_mouth_v020",
+model=PescaMouthy(#run_start=np.datetime64("2016-06-09 00:00"),
+                  #run_stop=np.datetime64("2016-06-20 00:00"),
+                  run_start=np.datetime64("2016-12-10 00:00"),
+                  run_stop=np.datetime64("2016-12-20 00:00"),
+                  run_dir="data_mouth_v035",
                   salinity=False,
                   temperature=False,
                   nlayers_3d=0,
                   pch_area=2.0)
 
 model.mdu['output','MapInterval']=1800
+model.mdu['geometry','ChangeVelocityAtStructures']=1
 # model.mdu['time','DtUser']=30.
-# model.mdu['numerics','CFLmax']=0.4
+model.mdu['numerics','CFLmax']=0.5
+model.mdu['numerics','Teta0']=0.7
+
 # model.mdu['time','AutoTimestepNoStruct']=1
 
 ## 
@@ -97,6 +96,7 @@ model.run_simulation()
 # v015: back to v013 period, a bit longer, and use new bathy 20210820
 # v016: winter breach period with mouth_as_structures. Fails during the breach 
 # v017: winter breach, back to two structures with resistance (like salt v116)
+#     seem to have deleted this one.
 # v018: longer period like v015, but with the mouth structures.
 #     appears to be identical to v015.
 
@@ -105,4 +105,25 @@ model.run_simulation()
 
 # v020: Longer period covering neap
 
-
+# v021: Return to v016-ish, mouth_as_structures, but try DFM option to omit
+#       acceleration over structures.
+#       Stable, but not a great improvement in draining ability.
+# v022: Broader trapezoidal channel.
+# v023: Taper structures in the longitudinal direction
+# v024: More conservative eta and CFLmax choices
+# v025: Dredge the bathy around the structures
+#       very twitchy
+# v026: diagnosing hydraulic controls. one structure, winter breach.
+# v027:  bring in dredged mouth (via DEM)
+# v028:  +-freeweircoefficients down to 0.5 (note these all have extraresistance=10)
+# v029:  +-freeweircoefficients up to 2.0 (note these all have extraresistance=10)
+#      might have overwritten v029 with v030.
+#      freeweircoefficients back to 1.0, and extraresistance to 0.
+# v030:  drop upstream/downstream levels. Not sure why they had gotten higher...
+# v031:  from v030, free weir coeffs to 10
+# v032:  free and drowned weir coeffs to 10.
+# v033:  test mouth_as_structures with the large flow coefficients
+#        not stable.
+# v034:  test single structure, no extraresistance, winter breach, free/drowned coeff 0.55
+#         Didn't look that great.
+# v035:  same, but use mouth_out
