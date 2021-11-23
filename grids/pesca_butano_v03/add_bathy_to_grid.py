@@ -24,7 +24,7 @@ dems= [
 
 if gen_grids:
     grid_dir="../../../grid"
-    grid_fn=os.path.join(grid_dir,'quad_tri_v21-edit05.nc')
+    grid_fn=os.path.join(grid_dir,'quad_tri_v21-edit08.nc')
     g=unstructured_grid.UnstructuredGrid.read_ugrid(grid_fn)
     g.renumber()
     
@@ -87,7 +87,7 @@ for dem_fn, name in dems:
                 z_node[n]=edge_data[g.node_to_edges(n),0].min()
 
         g.add_node_field('node_z_bed',z_node,on_exists='overwrite')
-        g.write_ugrid(f'pesca_butano_{name}_bathy_mod3.nc',overwrite=True)
+        g.write_ugrid(f'pesca_butano_{name}_bathy.nc',overwrite=True)
 
     del dem
 
