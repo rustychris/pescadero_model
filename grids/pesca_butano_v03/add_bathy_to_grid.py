@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 bathy_dir="../../../bathy"
 bathy_asbuilt_fn=os.path.join(bathy_dir,'compiled-dem-asbuilt-20210920-1m.tif')
 bathy_existing_fn=os.path.join(bathy_dir,'compiled-dem-existing-20210920-1m.tif')
-#bathy_existing_fn=os.path.join(bathy_dir,'compiled-dem-existing-20210913-1m_deep_channel_mod3.tif')
+
 
 ##
 gen_weirs=True

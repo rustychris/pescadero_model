@@ -450,7 +450,10 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
             plt.axis('off')
             plt.axis((552070., 552178., 4124574., 4124708.))
             fig.savefig('mouth_bathy.png',dpi=150)
-            
+
+    # If not None, set bed elevation "near" mouth structures to the given
+    # elevation
+    mouth_z_dredge=None
     def add_mouth_as_structures(self,plot=False):
         """
         Use 'mouth_centerline' and 'mmouth...' features in the shapefiles
@@ -503,21 +506,54 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
         # subset ds to just the run
         ds=ds.isel( time=( (ds.time>=self.run_start) & (ds.time<=self.run_stop)))
 
-        qcm_width=ds.w_inlet
+        # With the slope formulation below, this avoids divide by zero.
+        qcm_width=ds.w_inlet.clip(1.0)
         qcm_z_thalweg=ds.z_thalweg
 
         for idx,(j,ll) in enumerate(zip(edge_mask,j_ll)):
-            # Try a v-shaped channel, slope set by qcm width and
-            # a presumed 1m edge-of-channel relief
+            
+            if 0: # This was still too frictional
+                # Try a v-shaped channel, slope set by qcm width and
+                # a presumed 1m edge-of-channel relief
+                crest=qcm_z_thalweg + 1.0*(ll[1])/(qcm_width/2)
 
-            # This was still too frictional
-            # crest=qcm_z_thalweg + 1.0*(ll[1])/(qcm_width/2)
+            if 0:
+                # Try something more like a trapezoidal channel
+                l_flat=7 # half-width of the flat bottom of the trapezoid
+                z_scale=1.0 # rise of the trapezoid, with the run defined by qcm_width/2
+                # for small qcm_width, additionally limit the elevation to
+                # physical-ish range.
+                shape=(z_scale*(ll[1]-l_flat).clip(0)/(qcm_width/2)).clip(0,8.0)
+                z_offset=-0.10 # additional ad hoc adjustment to qcm_z_thalweg
+                crest=qcm_z_thalweg + z_offset + shape
 
-            # Try something more like a trapezoidal channel
-            l_flat=7 # half-width of the flat bottom
-            z_scale=1.0
-            z_offset=-0.10
-            crest=qcm_z_thalweg + z_offset + z_scale*max(0,(ll[1]-l_flat))/(qcm_width/2)
+            if 1:
+                # Trapezoid, but the flat part is the full width from the QCM
+                lat_flat=qcm_width/2
+                lat_slope = 1.0/10 # outside the width from qcm, 1 in 10 slope
+                shape=(ll[1]-lat_flat).clip(0) * lat_slope
+
+                # And a trapezoidal longitudinal shape, flat in the middle.
+                # sloping down up/downstream.
+                rise=1.0
+                run=(j_ll[:,0].max() - j_ll[:,0].min())/2
+                
+                lon_mid=np.median(j_ll[:,0]) # or the lon coord nearest the middle 
+                lon_slope=rise/run
+                lon_flat=8.0 # half-width of flat length along channel
+                if idx==0:
+                    print("Longitudinal slope is %.3f (%.2f:%.2f)"%(lon_slope,rise,run))
+
+                # additional ad hoc adjustment to qcm_z_thalweg of -0.10, and
+                # slope down away from the middle-ish point.
+                z_offset=-0.10 - lon_slope*( abs(ll[0]-lon_mid )-lon_flat).clip(0)
+                crest=qcm_z_thalweg + z_offset + shape
+                
+            if not np.all(np.isfinite(crest)):
+                print("%d/%d crest values are not finite"%( (~np.isfinite(crest)).sum(),
+                                                            len(crest)))
+                import pdb
+                pdb.set_trace()
             
             self.add_Structure(
                 type='generalstructure',
@@ -526,8 +562,16 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
                 CrestLevel=crest,	# Bed level at centre of structure (m AD)
                 extraresistance=0,                   	# Extra resistance (-)
                 GateOpeningWidth=100.0,                 	# Horizontal opening width between the doors (m)
-            )        
+            )
 
+        if self.mouth_z_dredge is not None:
+            e2c=self.grid.edge_to_cells()
+            cells=np.unique(e2c[edge_mask])
+            cells=cells[cells>=0]
+            nodes=np.unique(self.grid.cells['nodes'][cells].ravel())
+            nodes=nodes[nodes>=0]
+            self.grid.nodes['node_z_bed'][nodes] = np.minimum( self.grid.nodes['node_z_bed'][nodes],
+                                                               self.mouth_z_dredge)
 
 class PescaButanoMixin(PescaButanoBaseMixin):
     """ Add realistic boundary conditions to base Pescadero model
@@ -540,7 +584,7 @@ class PescaButanoMixin(PescaButanoBaseMixin):
     def set_source_sink(self):
         self.set_seepage()
         self.set_overtopping()
-        #self.set_evaporation()        
+        self.set_atmospheric_bcs()
 
     def set_mouth_bc(self):
         ocean_bc=self.set_mouth_stage_qcm()
@@ -684,14 +728,16 @@ class PescaButanoMixin(PescaButanoBaseMixin):
     # the period of the BML data
     qcm_time_offset=np.timedelta64(0,'s')
             
-    def add_mouth_gen_structure(self,name):
+    def add_mouth_gen_structure(self,name,crest=None,width=None):
         """
         Set up the flow control structure for the inner mouth structure
         """
         ds = self.prep_qcm_data()
 
-        crest= ds['z_thalweg']
-        width= ds['w_inlet']    
+        if crest is None:
+            crest= ds['z_thalweg']
+        if width is None:
+            width= ds['w_inlet']    
 
         self.add_Structure(
             type='generalstructure',
@@ -702,36 +748,47 @@ class PescaButanoMixin(PescaButanoBaseMixin):
             CrestWidth=50,                 	    # Width structure centre (m)
             Downstream1Width=55,                 	# Width structure right side (m)
             Downstream2Width=60,                 	# Width right side of structure (m)
-            Upstream2Level=0.25,                   	# Bed level left side of structure (m AD)
-            Upstream1Level=0.25,                   	# Bed level left side structure (m AD)
+            Upstream2Level=0.00,                   	# Bed level left side of structure (m AD)
+            Upstream1Level=0.005,                   	# Bed level left side structure (m AD)
             CrestLevel=crest,	                    # Bed level at centre of structure (m AD)
-            Downstream1Level=0.25,                   	# Bed level right side structure (m AD)
-            Downstream2Level=0.25,                   	# Bed level right side of structure (m AD)
+            Downstream1Level=0.00,                   	# Bed level right side structure (m AD)
+            Downstream2Level=0.00,                   	# Bed level right side of structure (m AD)
             GateLowerEdgeLevel=0.2,                  	# Gate lower edge level (m AD)
             pos_freegateflowcoeff=1,                   	# Positive free gate flow (-)
             pos_drowngateflowcoeff=1,                   	# Positive drowned gate flow (-)
-            pos_freeweirflowcoeff=1,                   	# Positive free weir flow (-)
-            pos_drownweirflowcoeff=1,                   	# Positive drowned weir flow (-)
+            pos_freeweirflowcoeff=0.55,                   	# Positive free weir flow (-)
+            pos_drownweirflowcoeff=0.55,                   	# Positive drowned weir flow (-)
             pos_contrcoeffreegate=1,                   	# Positive flow contraction coefficient (-)
             neg_freegateflowcoeff=1,                   	# Negative free gate flow (-)
             neg_drowngateflowcoeff=1,                   	# Negative drowned gate flow (-)
-            neg_freeweirflowcoeff=1,                   	# Negative free weir flow (-)
-            neg_drownweirflowcoeff=1,                   	# Negative drowned weir flow (-)
+            neg_freeweirflowcoeff=0.55,                   	# Negative free weir flow (-)
+            neg_drownweirflowcoeff=0.55,                   	# Negative drowned weir flow (-)
             neg_contrcoeffreegate=1,                   	# Negative flow contraction coefficient (-)
-            extraresistance=10,                   	# Extra resistance (-)
+            extraresistance=0.0,                   	# Extra resistance (-)
             GateHeight=10,                   	# Vertical gate door height (m)
             GateOpeningWidth=width,                 	# Horizontal opening width between the doors (m)
             #GateOpeningHorizontalDirection=symmetric,           	# Horizontal direction of the opening doors
             )
+
+    def set_atmospheric_bcs(self):
+        ds=self.prep_qcm_data()
+
+        ET_mm_hr=ds['evapotr_mmhour'] # already negative!
+        # negligible direct rain, just ET=negative rain
+        
+        precip=hm.RainfallRateBC(rainfall_rate=24*ET_mm_hr)
+        self.add_bcs([precip])
         
     ds_qcm=None
     def prep_qcm_data(self):
         '''load QCM output and prepare xr dataset'''
         if self.ds_qcm is None:
-            qcm_pre2016=pd.read_csv(os.path.join(local_config.data_dir,"ESA_QCM/ESA_draft_PescaderoQCM_output.csv"),
+            qcm_pre2016=pd.read_csv(os.path.join(local_config.data_dir,
+                                                 "ESA_QCM/ESA_draft_PescaderoQCM_output.csv"),
                                     skiprows=[0],usecols=range(7),
                                     parse_dates=['Date (PST)'])
-            qcm_2016_2017=pd.read_csv(os.path.join(local_config.data_dir,"ESA_QCM/ESA_draft_PescaderoQCM_output_4.28.2021.csv"),
+            qcm_2016_2017=pd.read_csv(os.path.join(local_config.data_dir,
+                                                   "ESA_QCM/ESA_draft_PescaderoQCM_output_4.28.2021.csv"),
                                       skiprows=[0],usecols=range(14),
                                       parse_dates=['Date (PST)'])
             # some extra rows in the csv
@@ -760,20 +817,25 @@ class PescaButanoMixin(PescaButanoBaseMixin):
             qcm['seepage_abs']=qcm['seepage']*-1 # need to be in absolute values
             qcm.loc[qcm['seepage_abs'] < 0,'seepage_abs'] = 0 # removing seepage from ocean to lagoon
                        
-            # Values are already [-]. Negative rainfall --> evapotranspiration
+            # Values are already negative. Negative rainfall --> evapotranspiration
             qcm['evapotr']= qcm['Modeled ET'] * 0.02831685 # ft3/s to m3/s
             # evapotr/grid_area*1000 --> m3 to mm
             # *3600 --> s to hour
             # would be better to figure out time-average wet area. This figure is the
             # total grid area.
+            # Plotted the wetted area over time for a run that spanned closed and
+            # open periods. Fraction wetted was around 0.85 leading up to breach.
+            # Once tidal, fraction wetted was around 0.5 mean. I think it is more the
+            # closed conditions that we're interested in here, so call it 0.75
             grid_area=1940000 # m2
-            qcm['evapotr_mmhour']=qcm['evapotr']/grid_area*1000*3600
+            qcm['evapotr_mmhour']=qcm['evapotr']/(0.75*grid_area)*1000*3600
             # data already [+]            
             qcm['wave_overtop']= qcm['Modeled wave overtopping'] * 0.02831685 # from ft3/s to m3/s
+            qcm['flow_inlet']=qcm['Modeled inlet flow']* 0.02831685
 
             ds=xr.Dataset.from_dataframe(qcm[ 
                 ['time','z_ocean','z_thalweg','w_inlet','seepage_abs','evapotr_mmhour','wave_overtop',
-                 'z_lagoon']]
+                 'z_lagoon','flow_inlet']]
                 .set_index('time'))
             self.ds_qcm=ds 
             
