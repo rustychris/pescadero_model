@@ -1,0 +1,59 @@
+Running preprocessor with my grid, I get "Incomplete ball"
+ -- bugs in bc marks. Fixed.
+ -- preprocessing now succeeds
+
+
+It's running.
+
+Assuming it does something kind of reasonable with tidal simulations,
+what are the options for a moving bed, starting w/2D?
+
+Bed deformation:
+  This sounds like a one off.  Can specify a time over which the bed
+  will deform based on bdef.gr3 values. There is also "3D deformation"
+  which requires some interaction with the code.
+  schism_glbl.F90: bdef, bdef1, bdef2.
+                   bdef I think is total deformation.
+  schism_init.F90: for imm=2, user must update bottom vel. etc. in update_bdef(),
+                   "not working yet for ics=2" - what is ics=2?
+  so I think that if you choose imm=2, then you have to write update_bdef(), as it
+  starts with just some basic example code
+  
+SED3D:
+  Includes morphological module based Exner equation, see Pinto 2012
+  walk through sediment.in
+   - enable sed_morph
+   - Nbed = 1 for simple, single bed layer
+   sediment classes
+   bedthick.ic
+   bed_frac_*.ic
+  
+sed_dump.in:
+  can dump or dredge sediment at prescribed times
+
+I think that coding in a bed deformation is the way to go. Anything else and
+we'll be calibrating a morph model for ages.
+
+1. Get a 4 core run, openmp or mpi, to run
+   - seems to be as simple as mpiexec -n 4 pschism ...
+   - single core looks like 33 minutes, vs. 14 minutes on 4 cores.
+2. Get a 2D, imm=2 run to block tides.
+   real(rkind) :: rate=0.0001 ! dz/dt
+   So in an hour should get 0.36 m rise.
+   Should take 3h or so to block any flow.
+   This has been failing.
+
+2b: Sed model with dumping
+    Can dumping do what we need?
+    run003.  Seems to work
+    
+3. Run in 3D, 10 layers.
+    precompiled/installed gotm to ~/local/gotm/
+    had to muck with CMakeFiles.lst or whatever. uncomment the
+    section that allows for prebuilt binaries.
+    but whatever gotm I have also needs yaml
+
+Timestep: 30s should be okay. Probably don't go below 10s.
+
+run005: okay, 10 layers. maybe too much mixing.
+run006: try dialing down max mixing as much as possible.

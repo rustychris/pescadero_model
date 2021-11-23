@@ -19,14 +19,17 @@ from stompy.plot import plot_utils
 six.moves.reload_module(hm)
 six.moves.reload_module(dfm)
 
-dfm.DFlowModel.dfm_bin_dir="/opt/delft3dfm_2021.03/lnx64/bin/"
-os.environ['LD_LIBRARY_PATH']="/opt/delft3dfm_2021.03/lnx64/lib/"
+#dfm.DFlowModel.dfm_bin_dir="/opt/delft3dfm_2021.05/lnx64/bin/"
+#os.environ['LD_LIBRARY_PATH']="/opt/delft3dfm_2021.05/lnx64/lib/"
+dfm.DFlowModel.dfm_bin_dir="/home/rusty/src/dfm/r68819-dbg/bin"
+os.environ['LD_LIBRARY_PATH']="/home/rusty/src/dfm/r68819-dbg/lib"
+
 
 class VertPlizTest(dfm.DFlowModel):
     run_dir='runs/vertpliz'
     fig_num=2
     n_layers=25
-    num_procs=4
+    num_procs=1
     # mpiexec="mpiexec.openmpi" # seems to just run 4 copies
     mpiexec="mpiexec.mpich" # works.
     
@@ -105,16 +108,70 @@ class VertPlizTest(dfm.DFlowModel):
 # 10: Vertadvtypsal=6, forester=0, dicoww=1e-10, turb_model=3
 #   Compared to 8, this is slightly fresher near the bed
 
+
+##
+
+class VariablePliz(VertPlizTest):
+    """ 
+    Fails
+    """
+    def config_layers(self):
+        self.mdu['geometry','kmx']=self.n_layers
+        self.mdu['geometry','Layertype']=3
+        self.mdu['geometry','VertplizFile']='vertlayers.pliz'
+
+    def write(self):
+        super().write()
+        # My understanding is that the first 'z' coordinate is actually
+        # the number of layers,
+        # and the second 'z' coordinate is the layertype, and all z
+        # values beyond  that are ignored.
+        if 1:
+            # When extended more than dx/2 beyond the grid,
+            # this will run.
+            pli_data=[ ('domain',
+                        np.array( [ [-15,-15,10],
+                                    [615,-15,2],
+                                    [615,115,2],
+                                    [-15,115,10] ] )) ]
+        if 1:
+            # What about two polygons that together encompass the grid?
+            # fails with nan somewhere
+            # what is the number of layers matches? nope.
+            # What if they are sigma? matching count and both sigma will run.
+            #  non-matching, both sigma does not run.
+            pli_data=[ ('left',
+                        np.array( [ [-15,-15,10],
+                                    [300,-15,1],
+                                    [300,115,1],
+                                    [-15,115,10] ] )),
+                       ('right',
+                        np.array( [ [290,-15,1],
+                                    [615,-15,1],
+                                    [615,115,1],
+                                    [290,115,1] ] ))]
+        
+        fn=self.mdu['geometry','VertplizFile']
+        dio.write_pli(os.path.join(self.run_dir,fn),
+                      pli_data)
+        
+
+##         
+
 # Question: with dicoww=1e-10, and Forester=20, is there a difference
 # between default VertAdv and 2, and 4?  Which is faster between 2 and 4?
-model=VertPlizTest(run_dir='runs/vertpliz10')
-model.mdu['numerics','Vertadvtypsal']=6 #
-model.mdu['numerics','Maxitverticalforestersal']=0 # Forester
-model.mdu['numerics','Turbulencemodel']=3
+# vertpliz11: after hand-editing, it ran.
+model=VariablePliz(run_dir='runs/vertpliz12')
+#model.mdu['numerics','Vertadvtypsal']=6 #
+#model.mdu['numerics','Maxitverticalforestersal']=0 # Forester
+#model.mdu['numerics','Turbulencemodel']=3
+
 # model.mdu['physics','vicoww']=5e-5
 # So it does make a difference whether dicoww is 0.0 or the default.
 # what about just a real small value?
-model.mdu['physics','dicoww']=1e-10
+# model.mdu['physics','dicoww']=1e-10
+
+# vertpliz11: coming back to re-diagnose whether mixed 2D/3D is possible.
 
 model.write()
 model.partition()
@@ -128,30 +185,4 @@ except subprocess.CalledProcessError as exc:
     print(exc.output.decode())
     raise
 
-
-
-##
-
-class VariablePliz(VertPlizTest):
-    """ 
-    Fails
-    """
-    def config_layers(self):
-        self.mdu['geometry','kmx']=self.n_layers
-        self.mdu['geometry','Layertype']=3
-        fn='vertlayers.pliz'
-        self.mdu['geometry','VertplizFile']=fn
-
-        # My understanding is that the first 'z' coordinate is actually
-        # the number of layers,
-        # and the second 'z' coordinate is the layertype, and all z
-        # values beyond  that are ignored.
-        pli_data=[ ('domain',
-                    np.array( [ [-15,-5,10],
-                                [605,-5,2],
-                                [605,105,2],
-                                [-5,105,10] ] )) ]
-
-        dio.write_pli(os.path.join(self.run_dir,fn),
-                      pli_data)
         

@@ -1,4 +1,7 @@
 import os
+model_dir=os.path.dirname(__file__)
+data_dir=os.path.join(model_dir,"../../data")
+
 os.environ['LD_LIBRARY_PATH']="/home/rusty/src/dfm/1.6.3/lnx64/lib/"
 
 class LocalConfig(object):
