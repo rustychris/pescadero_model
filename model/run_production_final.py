@@ -119,9 +119,11 @@ class PescaChgMouth(pesca_base.PescaButano):
 # This set up for tidal to closed with salinity July-August 2016, assuming extraresistance=8
 # 40 days was 30G of output.
 # This is 3x longer.
-model=PescaChgMouth(run_start=np.datetime64("2016-07-25 00:00"),
+# v02: on farm, with 10 more days of spinup, includes evaporation, and wind.
+# Note that extraresistance is tricky here, since the run spans tidal and breach scenarios
+model=PescaChgMouth(run_start=np.datetime64("2016-07-15 00:00"),
                     run_stop=np.datetime64("2016-12-16 00:00"),
-                    run_dir="data_salt_filling-v01",
+                    run_dir="data_salt_filling-v02",
                     salinity=True,
                     temperature=True,
                     nlayers_3d=100,

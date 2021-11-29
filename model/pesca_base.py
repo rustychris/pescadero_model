@@ -79,6 +79,7 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
         self.mdu['output','MapFormat']=4 # ugrid output format 1= older, 4= Ugrid
 
         self.mdu['numerics','MinTimestepBreak']=0.001
+        self.mdu['numerics','Epshu']=0.005 # 5mm wet/dry threshold
 
         self.mdu['physics','UnifFrictCoef']=0.023 # just standard value.
 
@@ -580,6 +581,10 @@ class PescaButanoMixin(PescaButanoBaseMixin):
         self.set_creek_bcs()
         self.set_mouth_bc()
         self.set_source_sink()
+        # We do have air temp and relative humidity. However, at the moment
+        # no insolation data, and have not implemented a heat flux model of
+        # any sort.
+        self.set_wind()
         
     def set_source_sink(self):
         self.set_seepage()
@@ -778,6 +783,17 @@ class PescaButanoMixin(PescaButanoBaseMixin):
         
         precip=hm.RainfallRateBC(rainfall_rate=24*ET_mm_hr)
         self.add_bcs([precip])
+
+    def set_wind(self):
+        ds=xr.open_dataset(os.path.join(local_config.model_dir,"../forcing/wind/lagoon-met.nc"))
+        # ds.time is UTC
+        # ds.u_wind, ds.v_wind are in m/s.
+        # ds.T is air temperature
+        # ds.rh is relative humidity
+        # Condense to a single DataArray
+        ds['wind']=('time','xy'), np.c_[ ds.u_wind.values, ds.v_wind.values ]
+        wind_bc=hm.WindBC(wind=ds.wind)
+        self.add_bcs([wind_bc])
         
     ds_qcm=None
     def prep_qcm_data(self):
