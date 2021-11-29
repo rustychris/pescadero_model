@@ -577,6 +577,8 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
 class PescaButanoMixin(PescaButanoBaseMixin):
     """ Add realistic boundary conditions to base Pescadero model
     """
+    flow_regime='impaired' # 'impaired' or 'unimpaired'
+    
     def set_bcs(self):
         self.set_creek_bcs()
         self.set_mouth_bc()
@@ -691,8 +693,14 @@ class PescaButanoMixin(PescaButanoBaseMixin):
             ds=xr.Dataset.from_dataframe(df_desc.loc[:,['time','flow_cms']].set_index('time'))
             return ds['flow_cms']
 
-        da_butano=extract_da('Impaired flow Butano TIDAL')
-        da_pesca =extract_da('Impaired flow Pe TIDAL')
+        if self.flow_regime=='impaired':
+            da_butano=extract_da('Impaired flow Butano TIDAL')
+            da_pesca =extract_da('Impaired flow Pe TIDAL')
+        elif self.flow_regime=='unimpaired':
+            da_butano=extract_da('Unimpaired flow Butano TIDAL')
+            da_pesca =extract_da('Unimpaired flow Pe TIDAL')
+        else:
+            raise Exception("Expected flow regime '%s' to be impaired or unimpaired"%self.flow_regim)
 
         # Dredge shallower than usual to avoid stacking up z layers here.
         # This should mean that other parts of the domain with bathy down to -0.25
