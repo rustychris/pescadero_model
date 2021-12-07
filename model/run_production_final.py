@@ -121,9 +121,11 @@ class PescaChgMouth(pesca_base.PescaButano):
 # This is 3x longer.
 # v02: on farm, with 10 more days of spinup, includes evaporation, and wind.
 # Note that extraresistance is tricky here, since the run spans tidal and breach scenarios
+# v03: unimpaired flows
 model=PescaChgMouth(run_start=np.datetime64("2016-07-15 00:00"),
                     run_stop=np.datetime64("2016-12-16 00:00"),
-                    run_dir="data_salt_filling-v02",
+                    run_dir="data_salt_filling-v03",
+                    flow_regime='unimpaired',
                     salinity=True,
                     temperature=True,
                     nlayers_3d=100,
