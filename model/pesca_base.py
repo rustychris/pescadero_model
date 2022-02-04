@@ -134,7 +134,7 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
     def set_grid_and_features(self):
         # For now the only difference is the DEM. If they diverge, might go
         # with separate grid directories instead (maybe with some common features)
-        grid_dir=os.path.join(local_config.model_dir,"../grids/pesca_butano_v03")
+        grid_dir=os.path.join(local_config.model_dir,"../grids/pesca_butano_v04")
         self.set_grid(os.path.join(grid_dir, f"pesca_butano_{self.terrain}_deep_bathy.nc"))
         self.add_gazetteer(os.path.join(grid_dir,"line_features.shp"))
         self.add_gazetteer(os.path.join(grid_dir,"point_features.shp"))
