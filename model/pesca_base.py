@@ -723,7 +723,6 @@ class PescaButanoMixin(PescaButanoBaseMixin):
                 ck_temp=hm.ScalarBC(parent=ck,scalar='temperature',value=18)
                 self.add_bcs([ck_temp])
     def set_seepage(self):
-        
         ds = self.prep_qcm_data()
         seepage= ds['seepage_abs']       
         bc_seepage=hm.SourceSinkBC(name='seepage',flow=seepage,dredge_depth=None)
