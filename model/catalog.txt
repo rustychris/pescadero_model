@@ -454,4 +454,16 @@ data_salt_filling-v00
 data_salt_filling-v01
   Fix viscosity settings (to run_salt_2016_2017 values), and
   extend to very long run.
-  
+
+data_salt_filling-v02
+
+data_salt_filling-v03
+
+[renamed to be more explicit]
+data_salt_filling-v04_asbuilt_unimpaired
+
+data_salt_filling-v04_existing_impaired
+
+data_salt_filling-v04_asbuilt_impaired
+
+data_salt_filling-v04_existing_unimpaired

@@ -122,10 +122,19 @@ class PescaChgMouth(pesca_base.PescaButano):
 # v02: on farm, with 10 more days of spinup, includes evaporation, and wind.
 # Note that extraresistance is tricky here, since the run spans tidal and breach scenarios
 # v03: unimpaired flows
+
+# These are current best for comparison, but still running:
+# v04: unimpaired flows, asbuilt terrain, now refering to v04 grid which should be the same,
+#      but the fixed weirs are also there. 
+# v04_impaired: as advertised
+# v04_existing_impaired: as advertised
+# v04_existing_unimpaired: as advertised
+
 model=PescaChgMouth(run_start=np.datetime64("2016-07-15 00:00"),
                     run_stop=np.datetime64("2016-12-16 00:00"),
-                    run_dir="data_salt_filling-v03",
+                    run_dir="data_salt_filling-v04_existing_unimpaired",
                     flow_regime='unimpaired',
+                    terrain='existing',
                     salinity=True,
                     temperature=True,
                     nlayers_3d=100,
