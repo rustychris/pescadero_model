@@ -7,20 +7,56 @@ Created on Thu May  6 10:23:31 2021
 Like run_production_final, but with BMI-based seepage for the mouth
 
 STATUS: ready to test.
+
+BMI load library is getting:
+__libm_exp_table_128
+
+This is defined in libimf. The 'r' means it is a read-only data symbol, though lowercase does
+mean that it is a local symbol.
+
+(general) rustyh@farm:~/src/pescadero/model/model$ nm ~/src/dfm/delft3dfm_2021.03/lnx64/lib/libdflowfm.so.0.0.0 | grep exp_table
+                 U __libm_exp_table_128
+(general) rustyh@farm:~/src/pescadero/model/model$ nm ~/src/dfm/delft3dfm_2021.03/lnx64/lib/libimf.so | grep exp_table
+00000000001ecae8 r __libm_exp_table_128
+
+libimf appears to be on LD_LIBRARY_PATH, and defines the symbol in question. Is it a problem that it is a local symbol?
+
+interweb confirms that lower case could be a problem. So how does this work when invoking dflowfm?
+libimf is related to intel math library.
+
+But after forcing that symbol to be global (via objcopy), it still fails.
+At the same time, BMI initialization in the test script works, at least for serial run.
+
+Running this from head, after conda activate general and setting LD_LIBRARY_PATH, works.
+
+srun --partition high2 --mpi=pmi2 --mem-per-cpu 4G -n 32 -N 1 --time 1:00:00 python ./test_bmi_load.py 
+
+What about:
+srun --partition high2 --mpi=pmi2 --mem-per-cpu 4G -n 32 -N 1 --time 1:00:00 python ./run_production_bmi.py --bmi --mdu=data_salt_filling-v05_existing_impaired/flowfm.mdu 
+?
+
+And that fails with the missing symbol.
+ A: more imports, and some import is triggering the linkage issue
+ B: does more with the imports, finds a linkage issue.
+ C: other.
+
+Seems that loading libdflowfm.so conflicts with some aspect of netCDF4 and ogr/osr.
+
+
 """
+
 import os
-import pesca_base
+import pesca_base # this is going to be problematic
 import numpy as np
-from stompy.model import hydro_model
-from stompy.model.delft import dflow_model
-from stompy.grid import unstructured_grid
 from stompy import utils
 import xarray as xr
-
+import local_config
 
 import subprocess, shutil
 
-class PescaBmiSeepage(pesca_base.PescaButano):
+os.environ['NUMEXPR_MAX_THREADS']='1'
+
+class PescaBmiSeepageMixin(object):
     extraresistance=8.0
 
     def configure_global(self):
@@ -141,11 +177,11 @@ class PescaBmiSeepage(pesca_base.PescaButano):
         # Not sure I still need to pass in the seepages
         # for seepage in self.seepages:
         #     options+=["-s",seepage]
-        options.append(self.mdu.filename)
+        options += ['--mdu',self.mdu.filename]
 
         if num_procs>1:
             #real_cmd = real_cmd + ["--mpi=intel"] + options
-            real_cmd = real_cmd + options
+            real_cmd = real_cmd + ["--mpi=slurm"] + options
             return self.mpirun(real_cmd)
         else:
             real_cmd= real_cmd + options
@@ -186,47 +222,58 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description='Run Pescadero hydro model.')
     parser.add_argument('-b','--bmi',action='store_true',
                         help='run as a BMI task')
-    parser.add_argument('mdu',help='Path to MDU file when run as BMI task')
+    parser.add_argument('--mdu',help='Path to MDU file when run as BMI task')
     # Get the MPI flavor just to know how to identify rank
     parser.add_argument("-m", "--mpi", help="Enable MPI flavor",default=None)
 
     args = parser.parse_args(argv)
 
     if args.bmi:
+        assert args.mdu is not None
         model=PescaBmiSeepage.load(args.mdu)
         task_main(model,args)
     else:
-        model=PescaBmiSeepage(run_start=np.datetime64("2016-07-15 00:00"),
-                              run_stop=np.datetime64("2016-12-16 00:00"),
-                              run_dir="data_salt_filling-v05_existing_impaired",
-                              flow_regime='impaired',
-                              terrain='existing',
-                              salinity=True,
-                              temperature=True,
-                              nlayers_3d=100,
-                              z_max=3.0,z_min=-0.5,
-                              extraresistance=8)
+        driver_main(args)
 
-        model.write()
+def driver_main(args):
+    class PescaBmiSeepage(PescaBmiSeepageMixin,pesca_base.PescaButano):
+        pass
+    
+    model=PescaBmiSeepage(run_start=np.datetime64("2016-07-15 00:00"),
+                          run_stop=np.datetime64("2016-12-16 00:00"),
+                          run_dir="data_salt_filling-v05_existing_impaired",
+                          flow_regime='impaired',
+                          terrain='existing',
+                          salinity=True,
+                          temperature=True,
+                          nlayers_3d=100,
+                          z_max=3.0,z_min=-0.5,
+                          extraresistance=8)
 
-        shutil.copyfile(__file__,os.path.join(model.run_dir,"script.py"))
-        shutil.copyfile("pesca_base.py",os.path.join(model.run_dir,"pesca_base.py"))
+    model.write()
 
-        model.partition()
+    shutil.copyfile(__file__,os.path.join(model.run_dir,"script.py"))
+    shutil.copyfile("pesca_base.py",os.path.join(model.run_dir,"pesca_base.py"))
 
-        try:
-            print(model.run_dir)
-            if model.num_procs<=1:
-                nthreads=8
-            else:
-                nthreads=1
-            model.run_simulation(threads=nthreads)
-        except subprocess.CalledProcessError as exc:
-            print(exc.output.decode())
-            raise
+    model.partition()
+
+    try:
+        print(model.run_dir)
+        if model.num_procs<=1:
+            nthreads=8
+        else:
+            nthreads=1
+        model.run_simulation(threads=nthreads)
+    except subprocess.CalledProcessError as exc:
+        print(exc.output.decode())
+        raise
 
 
 def task_main(model,args):
+    print("Top of task_main")
+    print("LD_LIBRARY_PATH")
+    print(os.environ['LD_LIBRARY_PATH'])
+    
     import bmi.wrapper
     from numpy.ctypeslib import ndpointer  # nd arrays
     from ctypes import (
@@ -240,28 +287,35 @@ def task_main(model,args):
         # Loading
         # cdll
     )
-    
+
+    for k in os.environ:
+        if ('SLURM' in k) or ('MPI' in k):
+            print(f"{k} => {os.environ[k]}")
+            
     if args.mpi is None:
+        print("args.mpi is None")
         rank=0
-    elif args.mpi=='intel':
+    elif args.mpi in ['intel','slurm']:
         rank=int(os.environ['PMI_RANK'])
-    elif args.mpi=='slurm':
-        rank=int(os.environ['SLURM_PROCID'])
-        
+    #elif args.mpi=='slurm':
+    #    rank=int(os.environ['SLURM_PROCID'])
+    else:
+        raise Exception("Don't know how to find out rank")
+
+    print(f"[rank {rank}] about to open engine")
     sim=bmi.wrapper.BMIWrapper(engine=os.path.join(local_config.dfm_root,
                                                    "lib/libdflowfm.so"))
+    print(f"[rank {rank}] done with open engine")
 
     # Just need to keep ahead of the model a little bit.
     dt=300.0
-
-    print(f"[{rank}]")
 
     if rank==0:
         seepages=[ dict(name=s) for s in model.seepages]
 
         for rec in seepages:
             t_pad=dt/60. # In minutes
-            tim_fn=os.path.join(model.run_dir,f'{rec['name']}.tim')
+            tim_fn=os.path.join(model.run_dir,f'{rec["name"]}.tim')
             rec['fp']=open(tim_fn,'wt')
             for t in [0.0,t_pad]:
                 rec['fp'].write(f"{t:.4f} 0.05 0.0\n")
