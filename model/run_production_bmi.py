@@ -282,7 +282,7 @@ def task_main(args):
     print(f"[rank {rank}] done with open engine")
 
     # Just need to keep ahead of the model a little bit.
-    dt=300.0
+    dt=900.0 # update interval of the history file.
 
     # really just to get the list of seepages and the functions to handle them.
     model=PescaBmiSeepageMixin()
@@ -336,7 +336,10 @@ def task_main(args):
             t_now=sim.get_current_time()
 
             try:
-                ds=xr.open_dataset(hist_fn)
+                # try to streamline this, since we'll be doing it a lot and
+                # CF decoding could get slow when the history file is large.
+                ds=xr.open_dataset(hist_fn,decode_cf=False,decode_times=False,
+                                   decode_coords=False)
             except Exception as exc:
                 print(f"rank {rank}  model time {t_now}  Failed to open history")
                 print(exc)

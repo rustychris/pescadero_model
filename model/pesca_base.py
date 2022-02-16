@@ -141,11 +141,12 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
         self.add_gazetteer(os.path.join(grid_dir,"polygon_features.shp"))
 
         # Check for and install fixed_weirs
+        # Updated to now force this, to avoid hidden discrepancies
         fixed_weir_fn=os.path.join(grid_dir,f"fixed_weirs-{self.terrain}.pliz")
-        if os.path.exists(fixed_weir_fn):
-            self.fixed_weirs=dio.read_pli(fixed_weir_fn)
-        else:
-            self.log.warning(f"No fixed weir found ({fixed_weir_fn})")
+        #if os.path.exists(fixed_weir_fn):
+        self.fixed_weirs=dio.read_pli(fixed_weir_fn)
+        #else:
+        #   self.log.warning(f"No fixed weir found ({fixed_weir_fn})")
 
     def friction_geometries(self):
         return self.match_gazetteer(geom_type='Polygon',type=type)
