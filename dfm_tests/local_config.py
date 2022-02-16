@@ -3,11 +3,13 @@ import stompy.model.delft.dflow_model as dfm
 
 dfm_root="/home/rustyh/src/dfm/delft3dfm_2021.03/lnx64"
 lib=os.path.join( dfm_root,"lib")
-if 'LD_LIBRARY_PATH' in os.environ:
-    # cluster often has stuff in here already
-    os.environ['LD_LIBRARY_PATH']=lib+":"+os.environ['LD_LIBRARY_PATH']
-else:
-    os.environ['LD_LIBRARY_PATH']=lib
+
+# Seems this might be breaking BMI runs???
+# if 'LD_LIBRARY_PATH' in os.environ:
+#     # cluster often has stuff in here already
+#     os.environ['LD_LIBRARY_PATH']=lib+":"+os.environ['LD_LIBRARY_PATH']
+# else:
+#     os.environ['LD_LIBRARY_PATH']=lib
 
 model_dir=os.path.dirname(__file__) # __file__=='/home/rusty/src/pescadero/model/model/local_config.py' 
 data_dir=os.path.join(model_dir,"../../data")

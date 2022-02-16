@@ -6,53 +6,24 @@ Created on Thu May  6 10:23:31 2021
 
 Like run_production_final, but with BMI-based seepage for the mouth
 
-STATUS: ready to test.
-
-BMI load library is getting:
-__libm_exp_table_128
-
-This is defined in libimf. The 'r' means it is a read-only data symbol, though lowercase does
-mean that it is a local symbol.
-
-(general) rustyh@farm:~/src/pescadero/model/model$ nm ~/src/dfm/delft3dfm_2021.03/lnx64/lib/libdflowfm.so.0.0.0 | grep exp_table
-                 U __libm_exp_table_128
-(general) rustyh@farm:~/src/pescadero/model/model$ nm ~/src/dfm/delft3dfm_2021.03/lnx64/lib/libimf.so | grep exp_table
-00000000001ecae8 r __libm_exp_table_128
-
-libimf appears to be on LD_LIBRARY_PATH, and defines the symbol in question. Is it a problem that it is a local symbol?
-
-interweb confirms that lower case could be a problem. So how does this work when invoking dflowfm?
-libimf is related to intel math library.
-
-But after forcing that symbol to be global (via objcopy), it still fails.
-At the same time, BMI initialization in the test script works, at least for serial run.
-
 Running this from head, after conda activate general and setting LD_LIBRARY_PATH, works.
 
 srun --partition high2 --mpi=pmi2 --mem-per-cpu 4G -n 32 -N 1 --time 1:00:00 python ./test_bmi_load.py 
 
 What about:
-srun --partition high2 --mpi=pmi2 --mem-per-cpu 4G -n 32 -N 1 --time 1:00:00 python ./run_production_bmi.py --bmi --mdu=data_salt_filling-v05_existing_impaired/flowfm.mdu 
+srun --partition high2 --mpi=pmi2 --mem-per-cpu 4G -n 32 -N 1 --time 1:00:00 python ./run_production_bmi.py --bmi --mpi=slurm --mdu=data_salt_filling-v05_existing_impaired/flowfm.mdu 
 ?
 
-And that fails with the missing symbol.
- A: more imports, and some import is triggering the linkage issue
- B: does more with the imports, finds a linkage issue.
- C: other.
-
 Seems that loading libdflowfm.so conflicts with some aspect of netCDF4 and ogr/osr.
-
-
+Refactor such that BMI invocation imports very little.
 """
-
+import sys
 import os
-import pesca_base # this is going to be problematic
 import numpy as np
 from stompy import utils
 import xarray as xr
-import local_config
-
 import subprocess, shutil
+import time
 
 os.environ['NUMEXPR_MAX_THREADS']='1'
 
@@ -230,12 +201,14 @@ def main(argv=None):
 
     if args.bmi:
         assert args.mdu is not None
-        model=PescaBmiSeepage.load(args.mdu)
-        task_main(model,args)
+        task_main(args)
     else:
         driver_main(args)
 
 def driver_main(args):
+    import pesca_base # this is going to be problematic
+    import local_config
+    
     class PescaBmiSeepage(PescaBmiSeepageMixin,pesca_base.PescaButano):
         pass
     
@@ -269,11 +242,12 @@ def driver_main(args):
         raise
 
 
-def task_main(model,args):
+def task_main(args):
     print("Top of task_main")
     print("LD_LIBRARY_PATH")
     print(os.environ['LD_LIBRARY_PATH'])
-    
+
+    import local_config
     import bmi.wrapper
     from numpy.ctypeslib import ndpointer  # nd arrays
     from ctypes import (
@@ -310,6 +284,10 @@ def task_main(model,args):
     # Just need to keep ahead of the model a little bit.
     dt=300.0
 
+    # really just to get the list of seepages and the functions to handle them.
+    model=PescaBmiSeepageMixin()
+    model.run_dir=os.path.dirname(args.mdu)
+
     if rank==0:
         seepages=[ dict(name=s) for s in model.seepages]
 
@@ -318,7 +296,7 @@ def task_main(model,args):
             tim_fn=os.path.join(model.run_dir,f'{rec["name"]}.tim')
             rec['fp']=open(tim_fn,'wt')
             for t in [0.0,t_pad]:
-                rec['fp'].write(f"{t:.4f} 0.05 0.0\n")
+                rec['fp'].write(f"{t:.4f} 0.05 0.0 0.0\n")
             rec['fp'].flush()
 
     # dfm will figure out the per-rank file
@@ -349,6 +327,9 @@ def task_main(model,args):
             rec['snk_mon_idx']=stations.index(rec['name']+'B')
         
     # TASK TIME LOOP
+    t_calc=0.0
+    t_bmi=0.0
+    t_last=time.time()
     while sim.get_current_time()<sim.get_end_time():
         # Write
         if rank==0:
@@ -388,11 +369,19 @@ def task_main(model,args):
                     Q=0.0
 
                 t_new=(dt+t_now) / 60.0
-                rec['fp'].write(f"{t_new+t_pad:.4f} {Q:.4f} 0.0\n")
+                rec['fp'].write(f"{t_new+t_pad:.4f} {Q:.4f} 0.0 0.0\n")
                 rec['fp'].flush()
 
+        t_bmi+=time.time() - t_last
+        t_last=time.time()
         sim.update(dt)
+        t_calc+=time.time() - t_last
+        t_last=time.time()
 
+        if rank==0:
+            print("t_bmi: ",t_bmi,"   t_calc: ",t_calc)
+            sys.stdout.flush()
+            
     sim.finalize()
     
 if __name__=='__main__':
