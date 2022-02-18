@@ -268,6 +268,8 @@ def task_main(args):
         salt_temp+=" 0.0"
     if int(mdu['physics','temperature'])>0:
         salt_temp+=" 0.0"
+    # runs don't always start at the reference time
+    tstart_min=float(mdu['time','tstart'])/60
         
     if rank==0:
         seepages=[ dict(name=s) for s in model.seepages]
@@ -276,8 +278,8 @@ def task_main(args):
             t_pad=dt/60. # In minutes
             tim_fn=os.path.join(model.run_dir,f'{rec["name"]}.tim')
             rec['fp']=open(tim_fn,'wt')
-            for t in [0.0,t_pad]:
-                rec['fp'].write(f"{t:.4f} 0.05{salt_temp}\n")
+            for t in [0.0,t_pad]: # HERE: may have to adjust for reference time
+                rec['fp'].write(f"{t+tstart_min:.4f} 0.05{salt_temp}\n")
             rec['fp'].flush()
 
     # dfm will figure out the per-rank file
@@ -292,6 +294,14 @@ def task_main(args):
             hist_fn="DFM_OUTPUT_flowfm/flowfm_0000_his.nc"
         # hoping I can figure out where to pull stage here, instead of
         # in the time loop
+        for waiting in range(10):
+            if os.path.exists(hist_fn):
+                break
+            print("Will sleep to wait for hist_fn")
+            sys.stdout.flush()
+            time.sleep(2.0)
+        else:
+            raise Exception(f"history file {hist_fn} never showed up?!")
         ds=xr.open_dataset(hist_fn)
         
         stations=[s.decode().strip() for s in ds.station_name.values]
