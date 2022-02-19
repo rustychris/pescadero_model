@@ -36,6 +36,8 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
     run_dir="run"
 
     terrain='existing'
+    # scenario=...
+    slr=0.0 # [m] applied in prep_qcm_dataset to ocean, lagoon and thalweg elevations
     salinity=True
     temperature=True
     # if salinity or temperature are included, then use this
@@ -275,7 +277,7 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
         self.add_nmc_structure()
         self.add_nm_ditch_structure()
         self.add_mouth_structure()
-        if  self.terrain=='asbuilt':
+        if self.terrain=='asbuilt':
             self.add_butano_weir_structure()
 
     pch_area = 6*3.1416*0.6**2 # 6 culverts of 2ft radius
@@ -612,9 +614,10 @@ class PescaButanoMixin(PescaButanoBaseMixin):
         """
         Use the interpolated QCM waterlevel datas as BC.
         Stock QCM output is a bit coarse (dt=1h) for stage, so 
-        smooth it at shorter time step
+        smooth it at shorter time step.
+        Include SLR offset
         """
-        da=self.prep_qcm_waterlevel_resampled()
+        da=self.prep_qcm_waterlevel_resampled() 
         ocean_bc=hm.StageBC(name='ocean_bc',water_level=da)
         self.add_bcs([ocean_bc])
         return ocean_bc
@@ -748,7 +751,7 @@ class PescaButanoMixin(PescaButanoBaseMixin):
         ds = self.prep_qcm_data()
 
         if crest is None:
-            crest= ds['z_thalweg']
+            crest= ds['z_thalweg']+self.slr
         if width is None:
             width= ds['w_inlet']    
 
@@ -805,7 +808,10 @@ class PescaButanoMixin(PescaButanoBaseMixin):
         
     ds_qcm=None
     def prep_qcm_data(self):
-        '''load QCM output and prepare xr dataset'''
+        '''
+        Load QCM output and prepare xr dataset
+        Note that self.slr is added to z_ocean, z_thalweg and z_lagoon
+        '''
         if self.ds_qcm is None:
             qcm_pre2016=pd.read_csv(os.path.join(local_config.data_dir,
                                                  "ESA_QCM/ESA_draft_PescaderoQCM_output.csv"),
@@ -861,6 +867,12 @@ class PescaButanoMixin(PescaButanoBaseMixin):
                 ['time','z_ocean','z_thalweg','w_inlet','seepage_abs','evapotr_mmhour','wave_overtop',
                  'z_lagoon','flow_inlet']]
                 .set_index('time'))
+
+            if self.slr != 0.0:
+                qcm['z_lagoon'] = qcm['z_lagoon']+self.slr
+                qcm['z_ocean'] = qcm['z_ocean']+self.slr
+                qcm['z_thalweg'] = qcm['z_thalweg']+self.slr
+                
             self.ds_qcm=ds 
             
         return self.ds_qcm
