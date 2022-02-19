@@ -41,85 +41,45 @@ class PescaBmiSeepageMixin(object):
         # history was 6G, and stays about the same.
         self.mdu['output','Wrihis_temperature']=0
     
-    def add_structures(self):
-        self.add_mouth_structure1()
-        self.add_mouth_structure2()
-        
-    def add_mouth_structure1(self):
+    def add_mouth_structure(self):
         """
-        Set up flow control structure for the inner mouth structure
+        Set up flow control structure for the inner and outer mouth structures
         """
         ds = self.prep_qcm_data()
         crest= ds['z_thalweg']
         width= ds['w_inlet']    
-        
-        self.add_Structure(
-            type='generalstructure',
-            name='mouth',
-            
-            Upstream2Width=100,                 	# Width left side of structure (m)
-            Upstream1Width=100,                 	# Width structure left side (m)
-            CrestWidth=100,                 	# Width structure centre (m)
-            Downstream1Width=100,                 	# Width structure right side (m)
-            Downstream2Width=100,                 	# Width right side of structure (m)
-            Upstream2Level=0,                   	# Bed level left side of structure (m AD)
-            Upstream1Level=0,                   	# Bed level left side structure (m AD)
-            CrestLevel=crest,	# Bed level at centre of structure (m AD)
-            Downstream1Level=0,                   	# Bed level right side structure (m AD)
-            Downstream2Level=0,                   	# Bed level right side of structure (m AD)
-            GateLowerEdgeLevel=0,                  	# Gate lower edge level (m AD)
-            pos_freegateflowcoeff=1,                   	# Positive free gate flow (-)
-            pos_drowngateflowcoeff=1,                   	# Positive drowned gate flow (-)
-            pos_freeweirflowcoeff=1,                   	# Positive free weir flow (-)
-            pos_drownweirflowcoeff=1,                   	# Positive drowned weir flow (-)
-            pos_contrcoeffreegate=1,                   	# Positive flow contraction coefficient (-)
-            neg_freegateflowcoeff=1,                   	# Negative free gate flow (-)
-            neg_drowngateflowcoeff=1,                  	# Negative drowned gate flow (-)
-            neg_freeweirflowcoeff=1,                   	# Negative free weir flow (-)
-            neg_drownweirflowcoeff=1,                   	# Negative drowned weir flow (-)
-            neg_contrcoeffreegate=1,                   	# Negative flow contraction coefficient (-)
-            extraresistance=self.extraresistance,                   	# Extra resistance (-)
-            GateHeight=10,                   	# Vertical gate door height (m)
-            GateOpeningWidth=width,                 	# Horizontal opening width between the doors (m)
-            )
-    def add_mouth_structure2(self):
-        """
-        Set up flow control structure for the inner mouth structure
-        """
-        ds = self.prep_qcm_data()
-        crest= ds['z_thalweg']
-        width= ds['w_inlet']    
-        
-        self.add_Structure(
-            type='generalstructure',
-            name='mouth_B',
-            
-            Upstream2Width=100,                 	# Width left side of structure (m)
-            Upstream1Width=100,                 	# Width structure left side (m)
-            CrestWidth=100,                 	# Width structure centre (m)
-            Downstream1Width=100,                 	# Width structure right side (m)
-            Downstream2Width=100,                 	# Width right side of structure (m)
-            Upstream2Level=0,                   	# Bed level left side of structure (m AD)
-            Upstream1Level=0,                   	# Bed level left side structure (m AD)
-            CrestLevel=crest,	# Bed level at centre of structure (m AD)
-            Downstream1Level=0,                   	# Bed level right side structure (m AD)
-            Downstream2Level=0,                   	# Bed level right side of structure (m AD)
-            GateLowerEdgeLevel=0,                  	# Gate lower edge level (m AD)
-            pos_freegateflowcoeff=1,                   	# Positive free gate flow (-)
-            pos_drowngateflowcoeff=1,                   	# Positive drowned gate flow (-)
-            pos_freeweirflowcoeff=1,                   	# Positive free weir flow (-)
-            pos_drownweirflowcoeff=1,                   	# Positive drowned weir flow (-)
-            pos_contrcoeffreegate=1,                   	# Positive flow contraction coefficient (-)
-            neg_freegateflowcoeff=1,                   	# Negative free gate flow (-)
-            neg_drowngateflowcoeff=1,                  	# Negative drowned gate flow (-)
-            neg_freeweirflowcoeff=1,                   	# Negative free weir flow (-)
-            neg_drownweirflowcoeff=1,                   	# Negative drowned weir flow (-)
-            neg_contrcoeffreegate=1,                   	# Negative flow contraction coefficient (-)
-            extraresistance=self.extraresistance,                   	# Extra resistance (-)
-            GateHeight=10,                   	# Vertical gate door height (m)
-            GateOpeningWidth=width,                 	# Horizontal opening width between the doors (m)
-            )
 
+        for name in ['mouth','mouth_B']:
+            self.add_Structure(
+                type='generalstructure',
+                name=name,
+            
+                Upstream2Width=100,                 	# Width left side of structure (m)
+                Upstream1Width=100,                 	# Width structure left side (m)
+                CrestWidth=100,                 	# Width structure centre (m)
+                Downstream1Width=100,                 	# Width structure right side (m)
+                Downstream2Width=100,                 	# Width right side of structure (m)
+                Upstream2Level=0,                   	# Bed level left side of structure (m AD)
+                Upstream1Level=0,                   	# Bed level left side structure (m AD)
+                CrestLevel=crest,	# Bed level at centre of structure (m AD)
+                Downstream1Level=0,                   	# Bed level right side structure (m AD)
+                Downstream2Level=0,                   	# Bed level right side of structure (m AD)
+                GateLowerEdgeLevel=0,                  	# Gate lower edge level (m AD)
+                pos_freegateflowcoeff=1,                   	# Positive free gate flow (-)
+                pos_drowngateflowcoeff=1,                   	# Positive drowned gate flow (-)
+                pos_freeweirflowcoeff=1,                   	# Positive free weir flow (-)
+                pos_drownweirflowcoeff=1,                   	# Positive drowned weir flow (-)
+                pos_contrcoeffreegate=1,                   	# Positive flow contraction coefficient (-)
+                neg_freegateflowcoeff=1,                   	# Negative free gate flow (-)
+                neg_drowngateflowcoeff=1,                  	# Negative drowned gate flow (-)
+                neg_freeweirflowcoeff=1,                   	# Negative free weir flow (-)
+                neg_drownweirflowcoeff=1,                   	# Negative drowned weir flow (-)
+                neg_contrcoeffreegate=1,                   	# Negative flow contraction coefficient (-)
+                extraresistance=self.extraresistance,                   	# Extra resistance (-)
+                GateHeight=10,                   	# Vertical gate door height (m)
+                GateOpeningWidth=width,                 	# Horizontal opening width between the doors (m)
+                )
+        
     # BMI risky business
     seepages=['seepage']
     
@@ -211,16 +171,28 @@ def driver_main(args):
     
     class PescaBmiSeepage(PescaBmiSeepageMixin,pesca_base.PescaButano):
         pass
-    
-    model=PescaBmiSeepage(run_start=np.datetime64("2016-07-15 00:00"),
-                          run_stop=np.datetime64("2016-12-16 00:00"),
-                          run_dir="data_salt_filling-v05_existing_impaired",
+
+    # model=PescaBmiSeepage(run_start=np.datetime64("2016-07-15 00:00"),
+    #                       run_stop=np.datetime64("2016-12-16 00:00"),
+    #                       run_dir="data_salt_filling-v05_existing_impaired",
+    #                       flow_regime='impaired',
+    #                       terrain='existing',
+    #                       salinity=True,
+    #                       temperature=True,
+    #                       nlayers_3d=100,
+    #                       z_max=3.0,z_min=-0.5,
+    #                       extraresistance=8)
+
+    # First go at 2013, very long, will start in 2D
+    model=PescaBmiSeepage(run_start=np.datetime64("2013-03-22 12:00"),
+                          run_stop=np.datetime64("2014-03-08 00:00"),
+                          run_dir="data_2013-2d-v00",
                           flow_regime='impaired',
                           terrain='existing',
-                          salinity=True,
-                          temperature=True,
-                          nlayers_3d=100,
-                          z_max=3.0,z_min=-0.5,
+                          salinity=False, # these false forces 2D
+                          temperature=False,
+                          nlayers_3d=1, # not really used
+                          # z_max=3.0,z_min=-0.5,
                           extraresistance=8)
 
     model.write()
@@ -288,6 +260,17 @@ def task_main(args):
     model=PescaBmiSeepageMixin()
     model.run_dir=os.path.dirname(args.mdu)
 
+    # Need to check the MDU to know if temp/salinity included
+    import stompy.model.delft.io as dio
+    mdu=dio.MDUFile(args.mdu)
+    salt_temp=""
+    if int(mdu['physics','salinity'])>0:
+        salt_temp+=" 0.0"
+    if int(mdu['physics','temperature'])>0:
+        salt_temp+=" 0.0"
+    # runs don't always start at the reference time
+    tstart_min=float(mdu['time','tstart'])/60
+        
     if rank==0:
         seepages=[ dict(name=s) for s in model.seepages]
 
@@ -295,8 +278,8 @@ def task_main(args):
             t_pad=dt/60. # In minutes
             tim_fn=os.path.join(model.run_dir,f'{rec["name"]}.tim')
             rec['fp']=open(tim_fn,'wt')
-            for t in [0.0,t_pad]:
-                rec['fp'].write(f"{t:.4f} 0.05 0.0 0.0\n")
+            for t in [0.0,t_pad]: # HERE: may have to adjust for reference time
+                rec['fp'].write(f"{t+tstart_min:.4f} 0.05{salt_temp}\n")
             rec['fp'].flush()
 
     # dfm will figure out the per-rank file
@@ -311,6 +294,14 @@ def task_main(args):
             hist_fn="DFM_OUTPUT_flowfm/flowfm_0000_his.nc"
         # hoping I can figure out where to pull stage here, instead of
         # in the time loop
+        for waiting in range(10):
+            if os.path.exists(hist_fn):
+                break
+            print("Will sleep to wait for hist_fn")
+            sys.stdout.flush()
+            time.sleep(2.0)
+        else:
+            raise Exception(f"history file {hist_fn} never showed up?!")
         ds=xr.open_dataset(hist_fn)
         
         stations=[s.decode().strip() for s in ds.station_name.values]
@@ -372,7 +363,7 @@ def task_main(args):
                     Q=0.0
 
                 t_new=(dt+t_now) / 60.0
-                rec['fp'].write(f"{t_new+t_pad:.4f} {Q:.4f} 0.0 0.0\n")
+                rec['fp'].write(f"{t_new+t_pad:.4f} {Q:.4f} {salt_temp}\n")
                 rec['fp'].flush()
 
         t_bmi+=time.time() - t_last
