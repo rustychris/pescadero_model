@@ -24,7 +24,7 @@ import local_config
 # Load the SFEI data, adjusting to UTC.
 dss=[]
 
-for year in [2011,2012,2016,2017,2018,2019,2020,2021]:
+for year in [2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021]:
     # Downloaded from
     # https://drive.google.com/drive/folders/1MNFXUUs6CaDyacxN5oCmtK_OjMHVQI7f
     ds_year=xr.open_dataset(os.path.join(local_config.data_dir,'sfei_wind',f'SFB_hourly_wind_and_met_data_{year}.nc'))
@@ -43,7 +43,8 @@ ds_haf=ds.isel(station=sta_idx)
 
 met=loadmat(os.path.join(local_config.data_dir,"M.Williams/data_for_dsepulveda/pescadero_estuary/meteorological_station/met_20111027_20120510.mat"))
 tz_met=np.squeeze(met['tz_met'])
-met_time=utils.to_dt64(np.squeeze(met['tz_met'])-366)
+#met_time=utils.to_dt64(np.squeeze(met['tz_met'])-366)
+met_time=utils.matlab_to_dt64(np.squeeze(met['tz_met']))
 
 # Compared to .dat file straight from Campbell logger. Documentation
 # says that is in local time
@@ -133,4 +134,4 @@ ds_pred['rh']=('time',), utils.fill_invalid(ds_haf['rh'].values)
 ds_pred['rh'].attrs.update(ds_haf['rh'].attrs)
 
 ##
-ds_pred.to_netcdf('lagoon-met.nc',mode='w')
+ds_pred.to_netcdf('lagoon-met-updated.nc',mode='w')
