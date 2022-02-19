@@ -19,7 +19,7 @@ import subprocess, shutil
 class PescaChgMouth(pesca_base.PescaButano):
     extraresistance=8.0
     
-    def add_structures(self):
+    def add_mouth_structure(self):
         self.add_mouth_structure1()
         self.add_mouth_structure2()
         
