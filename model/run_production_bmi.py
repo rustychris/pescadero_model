@@ -183,12 +183,25 @@ def driver_main(args):
     #                       z_max=3.0,z_min=-0.5,
     #                       extraresistance=8)
 
-    # First go at 2013, very long, will start in 2D
+    # First go at 2013, very long, will start in 2D. Wind was probably not working for this.
+    # model=PescaBmiSeepage(run_start=np.datetime64("2013-03-22 12:00"),
+    #                       run_stop=np.datetime64("2014-03-08 00:00"),
+    #                       run_dir="data_2013-2d-v00",
+    #                       flow_regime='impaired', 
+    #                       terrain='existing', # real runs will use asbuilt
+    #                       salinity=False, # these false forces 2D
+    #                       temperature=False,
+    #                       nlayers_3d=1, # not really used
+    #                       # z_max=3.0,z_min=-0.5,
+    #                       extraresistance=8)
+
+    # First go at SLR, very long, will start in 2D. 
     model=PescaBmiSeepage(run_start=np.datetime64("2013-03-22 12:00"),
                           run_stop=np.datetime64("2014-03-08 00:00"),
-                          run_dir="data_2013-2d-v00",
+                          run_dir="data_2013-2d-slr2ft-v00",
                           flow_regime='impaired',
-                          terrain='existing',
+                          terrain='asbuilt',
+                          slr=2*0.3048,
                           salinity=False, # these false forces 2D
                           temperature=False,
                           nlayers_3d=1, # not really used
@@ -270,7 +283,11 @@ def task_main(args):
         salt_temp+=" 0.0"
     # runs don't always start at the reference time
     tstart_min=float(mdu['time','tstart'])/60
-        
+
+    dt_min=mdu['numerics','MinTimestepBreak']
+    if dt_min:
+        dt_min=float(dt_min)
+    
     if rank==0:
         seepages=[ dict(name=s) for s in model.seepages]
 
@@ -322,10 +339,9 @@ def task_main(args):
     t_bmi=0.0
     t_last=time.time()
     while sim.get_current_time()<sim.get_end_time():
-        # Write
+        t_now=sim.get_current_time()
+        
         if rank==0:
-            t_now=sim.get_current_time()
-
             try:
                 # try to streamline this, since we'll be doing it a lot and
                 # CF decoding could get slow when the history file is large.
@@ -371,6 +387,15 @@ def task_main(args):
         sim.update(dt)
         t_calc+=time.time() - t_last
         t_last=time.time()
+
+        # Running via BMI will not fail out when the time step gets too short, but it will
+        # return back to here without going as far as we requested.
+        t_post=sim.get_current_time()
+        if t_post<t_now+0.75*dt:
+            print("Looks like run has stalled out.")
+            print(f"Expected a step from {t_now} to {t_now+dt} but only got to {t_post}")
+            print("Will break out")
+            break
 
         if rank==0:
             print("t_bmi: ",t_bmi,"   t_calc: ",t_calc)
