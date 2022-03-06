@@ -82,6 +82,7 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
 
         self.mdu['numerics','MinTimestepBreak']=0.001
         self.mdu['numerics','Epshu']=0.005 # 5mm wet/dry threshold
+        self.mdu['numerics','CFLmax']=0.4 # having some trouble with instability in 2D at 0.7
 
         self.mdu['physics','UnifFrictCoef']=0.023 # just standard value.
 
@@ -197,48 +198,51 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
         # Must be called after grid is set
                 
         self.mdu['geometry','Kmx']=self.nlayers_3d # number of layers
-        self.mdu['geometry','LayerType']=2 # all z layers
-        self.mdu['geometry','ZlayBot']=self.z_min
-        self.mdu['geometry','ZlayTop']=self.z_max
-        
-        # Adjust node elevations to avoid being just below interfaces
-        # This may not be necessary.
-        z_node=self.grid.nodes['node_z_bed'] # positive up
-        kmx=self.nlayers_3d
-        z_interfaces=np.linspace(self.z_min,self.z_max,kmx+1)
-
-        write_stretch=False 
-        if self.deep_bed_layer:
-            grid_z_min=self.grid.nodes['node_z_bed'].min()
-            if z_interfaces[0]>grid_z_min:
-                self.log.info("Bottom interface moved from %.3f to %.3f to match deepest node of grid"%
-                              (z_interfaces[0], grid_z_min))
-                z_interfaces[0]=grid_z_min
-                self.mdu['geometry','ZlayBot']=grid_z_min
-                write_stretch=True
+        if self.nlayers_3d>1:
+            self.mdu['geometry','LayerType']=2 # all z layers
+            self.mdu['geometry','ZlayBot']=self.z_min
+            self.mdu['geometry','ZlayTop']=self.z_max
             
-        dz_bed=z_interfaces[ np.searchsorted(z_interfaces,z_node).clip(0,kmx)] - z_node
-        thresh=min(0.05,0.2*np.median(np.diff(z_interfaces)))
-        # will deepen these nodes.  Could push them up or down depending
-        # on which is closer, but generally we end up lacking conveyance to
-        # err on the side of deepening
-        adjust=np.where((dz_bed>0)&(dz_bed<thresh),
-                        thresh-dz_bed, 0)
-        self.grid.nodes['node_z_bed']-=adjust
+            # Adjust node elevations to avoid being just below interfaces
+            # This may not be necessary.
+            z_node=self.grid.nodes['node_z_bed'] # positive up
+            kmx=self.nlayers_3d
+            z_interfaces=np.linspace(self.z_min,self.z_max,kmx+1)
 
-        if write_stretch:
-            # Based on this post:
-            # https://oss.deltares.nl/web/delft3dfm/general1/-/message_boards/message/1865851
-            self.mdu['geometry','StretchType']=1
-            cumul=100*(z_interfaces-z_interfaces[0])/(z_interfaces[-1] - z_interfaces[0])
-            # round to 0 decimals to be completely sure the sum is exact.
-            # hopefully 1 decimal is okay. gives more even layers when getting up to 25+ layers.
-            cumul=np.round(cumul,1)
-            fracs=np.diff(cumul)
-            # something like 10 10 10 10 10 10 10 10 10 10
-            # Best not to make this too long.  100 layers with %.4f is too long for the
-            # default partitioning script to handle, and this gets truncated.
-            self.mdu['geometry','stretchCoef']=" ".join(["%.1f"%frac for frac in fracs])
+            write_stretch=False 
+            if self.deep_bed_layer:
+                grid_z_min=self.grid.nodes['node_z_bed'].min()
+                if z_interfaces[0]>grid_z_min:
+                    self.log.info("Bottom interface moved from %.3f to %.3f to match deepest node of grid"%
+                                  (z_interfaces[0], grid_z_min))
+                    z_interfaces[0]=grid_z_min
+                    self.mdu['geometry','ZlayBot']=grid_z_min
+                    write_stretch=True
+
+            dz_bed=z_interfaces[ np.searchsorted(z_interfaces,z_node).clip(0,kmx)] - z_node
+            thresh=min(0.05,0.2*np.median(np.diff(z_interfaces)))
+            # will deepen these nodes.  Could push them up or down depending
+            # on which is closer, but generally we end up lacking conveyance to
+            # err on the side of deepening
+            adjust=np.where((dz_bed>0)&(dz_bed<thresh),
+                            thresh-dz_bed, 0)
+            self.grid.nodes['node_z_bed']-=adjust
+
+            if write_stretch:
+                # Based on this post:
+                # https://oss.deltares.nl/web/delft3dfm/general1/-/message_boards/message/1865851
+                self.mdu['geometry','StretchType']=1
+                cumul=100*(z_interfaces-z_interfaces[0])/(z_interfaces[-1] - z_interfaces[0])
+                # round to 0 decimals to be completely sure the sum is exact.
+                # hopefully 1 decimal is okay. gives more even layers when getting up to 25+ layers.
+                cumul=np.round(cumul,1)
+                fracs=np.diff(cumul)
+                # something like 10 10 10 10 10 10 10 10 10 10
+                # Best not to make this too long.  100 layers with %.4f is too long for the
+                # default partitioning script to handle, and this gets truncated.
+                self.mdu['geometry','stretchCoef']=" ".join(["%.1f"%frac for frac in fracs])
+        else:
+            self.mdu['geometry','LayerType']=1 # sigma
 
         # These *might* help in 3D...
         # On RH laptop they cause 2D runs to fail during startup.
@@ -863,15 +867,21 @@ class PescaButanoMixin(PescaButanoBaseMixin):
             qcm['wave_overtop']= qcm['Modeled wave overtopping'] * 0.02831685 # from ft3/s to m3/s
             qcm['flow_inlet']=qcm['Modeled inlet flow']* 0.02831685
 
+            # Currently missing ET and wave overtopping before 2016. Fill with 0 to let testing
+            # progress.
+            print("WARNING: filling missing wave and ET fluxes with 0.0!!!!")
+            qcm['wave_overtop'].fillna(value=0.0,inplace=True)
+            qcm['evapotr_mmhour'].fillna(value=0.0,inplace=True)
+            
             ds=xr.Dataset.from_dataframe(qcm[ 
                 ['time','z_ocean','z_thalweg','w_inlet','seepage_abs','evapotr_mmhour','wave_overtop',
                  'z_lagoon','flow_inlet']]
                 .set_index('time'))
 
             if self.slr != 0.0:
-                qcm['z_lagoon'] = qcm['z_lagoon']+self.slr
-                qcm['z_ocean'] = qcm['z_ocean']+self.slr
-                qcm['z_thalweg'] = qcm['z_thalweg']+self.slr
+                ds['z_lagoon']  = ds['z_lagoon']+self.slr
+                ds['z_ocean']   = ds['z_ocean']+self.slr
+                ds['z_thalweg'] = ds['z_thalweg']+self.slr
                 
             self.ds_qcm=ds 
             

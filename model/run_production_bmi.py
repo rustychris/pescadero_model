@@ -24,6 +24,7 @@ from stompy import utils
 import xarray as xr
 import subprocess, shutil
 import time
+import logging
 
 os.environ['NUMEXPR_MAX_THREADS']='1'
 
@@ -79,7 +80,67 @@ class PescaBmiSeepageMixin(object):
                 GateHeight=10,                   	# Vertical gate door height (m)
                 GateOpeningWidth=width,                 	# Horizontal opening width between the doors (m)
                 )
+            
+    def add_pch_structure(self):
+        z_crest=0.5 # The design plans for the culverts put base at -1ft NGVD --> 0.5m NABD88
+        height = 1.2 # height of the culverts (48in)
+
+        # self.add_Structure(
+        #     type='weir',
+        #     name='pch_gate',
+        #     CrestLevel=z_crest, 
+        #     CrestWidth=self.pch_area/height,
+        #     lat_cont_coeff = 1
+        # )
         
+        # Stock:
+        # self.add_Structure(
+        #     type='gate',
+        #     name='pch_gate',
+        #     GateHeight=1.5, # top of door to bottom of door
+        #     GateLowerEdgeLevel=z_crest + height, # elevation of top of culvert
+        #     GateOpeningWidth=0.0, # gate does not open
+        #     CrestLevel=z_crest, 
+        #     CrestWidth=self.pch_area/height, # to conserve the same effective cross section
+        # )
+
+        # Praying that a general structure avoided potential DFM bug, but it didn't.
+        # But monkeying with a bunch of the parameters was sufficient.
+        # Unclear on which ones avoided the instability (and whether a longer run will still
+        # get the instability...)
+        # {Up,Down}StreamWidth{1,2} = 10 => stable in v13, 20=>unstable in v11
+        # {Up,Down}StreamLevel{1,2} = -0.5 => stable in v13, 0=>unstable in v11
+        # GateHeight = 2.0 stable in v13, 1.5 => unstable in v11
+        # extraresistance = 1.0 stable in v13, 0.0 => unstable in v11
+        self.add_Structure(
+            type='generalstructure',
+            name='pch_gate',
+            Upstream2Width=10,                 	# Width left side of structure (m)
+            Upstream1Width=10,                 	# Width structure left side (m)
+            CrestWidth=self.pch_area/height,   	# Width structure centre (m)
+            Downstream1Width=10,                 	# Width structure right side (m)
+            Downstream2Width=10,                 	# Width right side of structure (m)
+            Upstream2Level=-0.5,                   	# Bed level left side of structure (m AD)
+            Upstream1Level=-0.5,                   	# Bed level left side structure (m AD)
+            CrestLevel=z_crest,	# Bed level at centre of structure (m AD)
+            Downstream1Level=-0.5,                   	# Bed level right side structure (m AD)
+            Downstream2Level=-0.5,                   	# Bed level right side of structure (m AD)
+            GateLowerEdgeLevel=z_crest + height, # elevation of top of culvert
+            pos_freegateflowcoeff=1,                   	# Positive free gate flow (-)
+            pos_drowngateflowcoeff=1,                   	# Positive drowned gate flow (-)
+            pos_freeweirflowcoeff=1,                   	# Positive free weir flow (-)
+            pos_drownweirflowcoeff=1,                   	# Positive drowned weir flow (-)
+            pos_contrcoeffreegate=1,                   	# Positive flow contraction coefficient (-)
+            neg_freegateflowcoeff=1,                   	# Negative free gate flow (-)
+            neg_drowngateflowcoeff=1,                  	# Negative drowned gate flow (-)
+            neg_freeweirflowcoeff=1,                   	# Negative free weir flow (-)
+            neg_drownweirflowcoeff=1,                   	# Negative drowned weir flow (-)
+            neg_contrcoeffreegate=1,                   	# Negative flow contraction coefficient (-)
+            extraresistance=1.0,                   	# Extra resistance (-)
+            GateHeight=2.0, # top of door to bottom of door
+            GateOpeningWidth=0.0, # gate does not open
+        )
+
     # BMI risky business
     seepages=['seepage']
     
@@ -195,19 +256,67 @@ def driver_main(args):
     #                       # z_max=3.0,z_min=-0.5,
     #                       extraresistance=8)
 
-    # First go at SLR, very long, will start in 2D. 
+    # First go at SLR, very long, will start in 2D.
+    # v00: ran okay, but accidentally ran as serial.
+    # v01: crashes around 11.56d. Still diagnosing.
+    # v02: try as 3D. 1 layer segfaulted. 3 layers is running.
+    # v03: run as 3D with 1 layer, switch to sigma to maybe avoid segfault?
+    #   no luck.
+    # Back to 2D, after fixing some nans. 3D with 1 layer never worked.
+    # v04: After fixing SLR and a logging problem, run a shorter, real 2D case.
+    #      keep SLR=0.0 for better replication.
+    # v05: Same, but trying 2022.02
+    # Both of those appear to be suffering from the same issue -- end up stuck at dt=0.03
+    # the good news is that they are almost done. Bad news is that they're super slow at this
+    # point.
+    # v06:  try these settings:
+    # model.mdu['geometry','ChangeVelocityAtStructures']=1
+    # model.mdu['time','AutoTimestepNoStruct']=1
+    #   those allowed it to run, but it still had a weird oscillation at 6/10.
+    # v07:  omit the ChangeVelocityAtStructures, since I haven't used that in the past.
+    # v08:  just use ChangeVelocityAtStructures
+    # v09: like v06, but with a general structure
+    # v10: like v06, but with a weir and lots of output
+    #      now it gets TWO of those transients, and the output window manages
+    #      to fall exactly in between them.
+    # v11: v09 structure, v10 output.
+    #   - nothing weird in the tim forcing.
+    #   - high-freq map output: some odd low spots in mesh2d_s1, notably on the
+    #     east side of NM. But at map time step 60, start to see the perturbation.
+    #     no real clues, though. fs goes up just upstream of the culverts, goes down
+    #     just downstream of them. 
+    # v11nobmi: copy that, bring in v06/seepage.tim, and run without bmi.
+    #    does not look any different.
+    # v12nobmi: similar, but also remove the pch structure entirely.
+    #    avoids the large spikes, but still has some fluctuations in the NM that are suspect.
+    #    maybe wind-driven setup? It's just a couple mm.
+    #    the east side of NM continues to look odd. But I think it's just that the surface is
+    #    overall higher, with a depression, and we happen to see it right as the depression
+    #    starts to fill.
+    # v13: change a bunch of structure settings. this seems to have stalled, but no idea why.
+    #      seems like a dud node (c6-90)
+    # v13r: just run it again. out of the gate running about 100x faster.
+    #      that looks decent. no obvious weird signals.
+
     model=PescaBmiSeepage(run_start=np.datetime64("2013-03-22 12:00"),
-                          run_stop=np.datetime64("2014-03-08 00:00"),
-                          run_dir="data_2013-2d-slr2ft-v00",
+                          #run_stop=np.datetime64("2014-03-08 00:00"),
+                          run_stop=np.datetime64("2013-06-15 00:00"), # DBG
+                          run_dir="data_2013-2d-slr0ft-v13r",
                           flow_regime='impaired',
                           terrain='asbuilt',
-                          slr=2*0.3048,
-                          salinity=False, # these false forces 2D
+                          slr=0.0, # 2*0.3048,
+                          salinity=False, # set both to false to force 2D
                           temperature=False,
-                          nlayers_3d=1, # not really used
-                          # z_max=3.0,z_min=-0.5,
+                          nlayers_3d=1, # 2D-ish
+                          z_max=3.0,z_min=-0.5,
                           extraresistance=8)
+    model.mdu['geometry','ChangeVelocityAtStructures']=1
+    model.mdu['time','AutoTimestepNoStruct']=1
 
+    # Target map output around the transient
+    # should be 2013-06-09 19:00 to 2013-06-10 02:00, every 5 minutes
+    model.mdu['output','MapInterval']="300 6894000 6919200"
+    
     model.write()
 
     shutil.copyfile(__file__,os.path.join(model.run_dir,"script.py"))
@@ -228,10 +337,19 @@ def driver_main(args):
 
 
 def task_main(args):
-    print("Top of task_main")
-    print("LD_LIBRARY_PATH")
-    print(os.environ['LD_LIBRARY_PATH'])
+    if args.mpi is None:
+        print("args.mpi is None")
+        rank=0
+    elif args.mpi in ['intel','slurm']:
+        rank=int(os.environ['PMI_RANK'])
+    else:
+        raise Exception("Don't know how to find out rank")
 
+    log_fn=os.path.join(os.path.dirname(args.mdu),f'log-{rank}')
+    logging.basicConfig(filename=log_fn, level=logging.DEBUG)
+    logging.debug("Top of task_main")
+    logging.debug('This message should go to the log file')
+    
     import local_config
     import bmi.wrapper
     from numpy.ctypeslib import ndpointer  # nd arrays
@@ -249,22 +367,13 @@ def task_main(args):
 
     for k in os.environ:
         if ('SLURM' in k) or ('MPI' in k):
-            print(f"{k} => {os.environ[k]}")
+            logging.debug(f"{k} => {os.environ[k]}")
             
-    if args.mpi is None:
-        print("args.mpi is None")
-        rank=0
-    elif args.mpi in ['intel','slurm']:
-        rank=int(os.environ['PMI_RANK'])
-    #elif args.mpi=='slurm':
-    #    rank=int(os.environ['SLURM_PROCID'])
-    else:
-        raise Exception("Don't know how to find out rank")
+    logging.info(f"[rank {rank}] about to open engine")
 
-    print(f"[rank {rank}] about to open engine")
     sim=bmi.wrapper.BMIWrapper(engine=os.path.join(local_config.dfm_root,
                                                    "lib/libdflowfm.so"))
-    print(f"[rank {rank}] done with open engine")
+    logging.info(f"[rank {rank}] done with open engine")
 
     # Just need to keep ahead of the model a little bit.
     dt=900.0 # update interval of the history file.
@@ -301,7 +410,7 @@ def task_main(args):
 
     # dfm will figure out the per-rank file
     # initialize changes working directory to where mdu is.
-    print(f"[{rank}] about to initialize")
+    logging.info(f"[{rank}] about to initialize")
     sim.initialize(args.mdu)
 
     if rank==0:
@@ -314,7 +423,7 @@ def task_main(args):
         for waiting in range(10):
             if os.path.exists(hist_fn):
                 break
-            print("Will sleep to wait for hist_fn")
+            logging("Will sleep to wait for hist_fn")
             sys.stdout.flush()
             time.sleep(2.0)
         else:
@@ -348,8 +457,8 @@ def task_main(args):
                 ds=xr.open_dataset(hist_fn,decode_cf=False,decode_times=False,
                                    decode_coords=False)
             except Exception as exc:
-                print(f"rank {rank}  model time {t_now}  Failed to open history")
-                print(exc)
+                logging.warning(f"rank {rank}  model time {t_now}  Failed to open history")
+                logging.warning(str(exc))
                 ds=None
 
             for rec in seepages:
@@ -373,8 +482,8 @@ def task_main(args):
                     k=0.0207 # m/s
                     z_bedrock=-1.37 # m NAVD88
                     Q=k*W/(2*L)*((h_src-z_bedrock)**2 - (h_dst-z_bedrock)**2)
-                    print(f"[rank {rank}] t_model={t_now} h_src={h_src:.4f} h_dst={h_dst:.4f} Q={Q:.4f}")
-
+                    logging.info(f"[rank {rank}] t_model={t_now} h_src={h_src:.4f} h_dst={h_dst:.4f} Q={Q:.4f}")
+                    # That is the last line I see in the log
                 else:
                     Q=0.0
 
@@ -384,7 +493,9 @@ def task_main(args):
 
         t_bmi+=time.time() - t_last
         t_last=time.time()
+        logging.info(f'taking a step dt={dt}')
         sim.update(dt)
+        logging.info('Back from step')
         t_calc+=time.time() - t_last
         t_last=time.time()
 
@@ -392,14 +503,13 @@ def task_main(args):
         # return back to here without going as far as we requested.
         t_post=sim.get_current_time()
         if t_post<t_now+0.75*dt:
-            print("Looks like run has stalled out.")
-            print(f"Expected a step from {t_now} to {t_now+dt} but only got to {t_post}")
-            print("Will break out")
+            logging.error("Looks like run has stalled out.")
+            logging.error(f"Expected a step from {t_now} to {t_now+dt} but only got to {t_post}")
+            logging.error("Will break out")
             break
 
         if rank==0:
-            print("t_bmi: ",t_bmi,"   t_calc: ",t_calc)
-            sys.stdout.flush()
+            logging.info(f"t_bmi: {t_bmi}   t_calc: {t_calc}")
             
     sim.finalize()
     
