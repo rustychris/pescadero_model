@@ -82,7 +82,7 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
 
         self.mdu['numerics','MinTimestepBreak']=0.001
         self.mdu['numerics','Epshu']=0.005 # 5mm wet/dry threshold
-        self.mdu['numerics','CFLmax']=0.4 # having some trouble with instability in 2D at 0.7
+        self.mdu['numerics','CFLmax']=0.7 # if things go sideways, go back to 0.4
 
         self.mdu['physics','UnifFrictCoef']=0.023 # just standard value.
 

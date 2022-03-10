@@ -85,25 +85,6 @@ class PescaBmiSeepageMixin(object):
         z_crest=0.5 # The design plans for the culverts put base at -1ft NGVD --> 0.5m NABD88
         height = 1.2 # height of the culverts (48in)
 
-        # self.add_Structure(
-        #     type='weir',
-        #     name='pch_gate',
-        #     CrestLevel=z_crest, 
-        #     CrestWidth=self.pch_area/height,
-        #     lat_cont_coeff = 1
-        # )
-        
-        # Stock:
-        # self.add_Structure(
-        #     type='gate',
-        #     name='pch_gate',
-        #     GateHeight=1.5, # top of door to bottom of door
-        #     GateLowerEdgeLevel=z_crest + height, # elevation of top of culvert
-        #     GateOpeningWidth=0.0, # gate does not open
-        #     CrestLevel=z_crest, 
-        #     CrestWidth=self.pch_area/height, # to conserve the same effective cross section
-        # )
-
         # Praying that a general structure avoided potential DFM bug, but it didn't.
         # But monkeying with a bunch of the parameters was sufficient.
         # Unclear on which ones avoided the instability (and whether a longer run will still
@@ -298,13 +279,16 @@ def driver_main(args):
     # v13r: just run it again. out of the gate running about 100x faster.
     #      that looks decent. no obvious weird signals.
 
+    # Back to some long runs to see if everything is working.
+    # v14: slr0ft, long run. CFLMax back to 0.7, hold breath
+    #      slr2ft, long run.
     model=PescaBmiSeepage(run_start=np.datetime64("2013-03-22 12:00"),
-                          #run_stop=np.datetime64("2014-03-08 00:00"),
-                          run_stop=np.datetime64("2013-06-15 00:00"), # DBG
-                          run_dir="data_2013-2d-slr0ft-v13r",
+                          run_stop=np.datetime64("2014-03-08 00:00"),
+                          # run_stop=np.datetime64("2013-06-15 00:00"), # DBG
+                          run_dir="data_2013-2d-slr2ft-v14",
                           flow_regime='impaired',
                           terrain='asbuilt',
-                          slr=0.0, # 2*0.3048,
+                          slr=2*0.3048,
                           salinity=False, # set both to false to force 2D
                           temperature=False,
                           nlayers_3d=1, # 2D-ish
@@ -313,9 +297,9 @@ def driver_main(args):
     model.mdu['geometry','ChangeVelocityAtStructures']=1
     model.mdu['time','AutoTimestepNoStruct']=1
 
-    # Target map output around the transient
+    # DBG: Target map output around the transient
     # should be 2013-06-09 19:00 to 2013-06-10 02:00, every 5 minutes
-    model.mdu['output','MapInterval']="300 6894000 6919200"
+    # model.mdu['output','MapInterval']="300 6894000 6919200"
     
     model.write()
 
