@@ -196,6 +196,10 @@ def main(argv=None):
     parser.add_argument('-b','--bmi',action='store_true',
                         help='run as a BMI task')
     parser.add_argument('--mdu',help='Path to MDU file when run as BMI task')
+
+    # -n only used for driver_main, not --bmi
+    parser.add_argument('-n','--num-cores',help='Number of cores',default=32)
+    
     # Get the MPI flavor just to know how to identify rank
     parser.add_argument("-m", "--mpi", help="Enable MPI flavor",default=None)
 
@@ -214,16 +218,17 @@ def driver_main(args):
     class PescaBmiSeepage(PescaBmiSeepageMixin,pesca_base.PescaButano):
         pass
 
-    # model=PescaBmiSeepage(run_start=np.datetime64("2016-07-15 00:00"),
-    #                       run_stop=np.datetime64("2016-12-16 00:00"),
-    #                       run_dir="data_salt_filling-v05_existing_impaired",
-    #                       flow_regime='impaired',
-    #                       terrain='existing',
-    #                       salinity=True,
-    #                       temperature=True,
-    #                       nlayers_3d=100,
-    #                       z_max=3.0,z_min=-0.5,
-    #                       extraresistance=8)
+    model=PescaBmiSeepage(run_start=np.datetime64("2016-07-15 00:00"),
+                          run_stop=np.datetime64("2016-12-16 00:00"),
+                          run_dir="data-2016-3d-asbuilt-impaired-v06",
+                          flow_regime='impaired',
+                          terrain='asbuilt',
+                          salinity=True,
+                          num_procs=args.num_cores,
+                          temperature=True,
+                          nlayers_3d=100,
+                          z_max=3.0,z_min=-0.5,
+                          extraresistance=8)
 
     # First go at 2013, very long, will start in 2D. Wind was probably not working for this.
     # model=PescaBmiSeepage(run_start=np.datetime64("2013-03-22 12:00"),
@@ -297,10 +302,6 @@ def driver_main(args):
     model.mdu['geometry','ChangeVelocityAtStructures']=1
     model.mdu['time','AutoTimestepNoStruct']=1
 
-    # DBG: Target map output around the transient
-    # should be 2013-06-09 19:00 to 2013-06-10 02:00, every 5 minutes
-    # model.mdu['output','MapInterval']="300 6894000 6919200"
-    
     model.write()
 
     shutil.copyfile(__file__,os.path.join(model.run_dir,"script.py"))
@@ -456,16 +457,16 @@ def task_main(args):
 
                     ds.close() # avoid xarray caching
 
-                    # These values are loosely based on values from Dane Behrens,
-                    # but liberally adjusted to get a seepage flux matching what 
-                    # is output from the QCM during closed conditions. During open
-                    # conditions the QCM predicts a larger flux, but for our purposes
-                    # I don't think that matters too much.
-                    L=200
-                    W=50
-                    k=0.0207 # m/s
-                    z_bedrock=-1.37 # m NAVD88
-                    Q=k*W/(2*L)*((h_src-z_bedrock)**2 - (h_dst-z_bedrock)**2)
+                    L=100 # [m] closed state, across shore distance
+                    W=100 # [m] along shore length of seepage outlet
+                    k=0.012 # [m/s] hydraulic conductivity
+                    z_bedrock=0.00 # [m]
+                    if (h_src>z_bedrock):
+                        Q=-k * (h_src-z_bedrock)*L/W * (h_src-h_dst)
+                    else:
+                        Q=-k * (1*0.001)/W           * (h_src-h_dst)
+                    Q*=1.65 # extra factor to get matching with QCM.
+
                     logging.info(f"[rank {rank}] t_model={t_now} h_src={h_src:.4f} h_dst={h_dst:.4f} Q={Q:.4f}")
                     # That is the last line I see in the log
                 else:
