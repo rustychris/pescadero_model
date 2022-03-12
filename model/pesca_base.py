@@ -819,17 +819,21 @@ class PescaButanoMixin(PescaButanoBaseMixin):
         if self.ds_qcm is None:
             qcm_pre2016=pd.read_csv(os.path.join(local_config.data_dir,
                                                  "ESA_QCM/ESA_draft_PescaderoQCM_output.csv"),
-                                    skiprows=[0],usecols=range(7),
+                                    skiprows=[0],usecols=range(14),
                                     parse_dates=['Date (PST)'])
             qcm_2016_2017=pd.read_csv(os.path.join(local_config.data_dir,
                                                    "ESA_QCM/ESA_draft_PescaderoQCM_output_4.28.2021.csv"),
                                       skiprows=[0],usecols=range(14),
                                       parse_dates=['Date (PST)'])
             # some extra rows in the csv
+            qcm_pre2016=qcm_pre2016[ ~qcm_pre2016['Date (PST)'].isnull() ]
             qcm_2016_2017=qcm_2016_2017[ ~qcm_2016_2017['Date (PST)'].isnull() ]
             qcm=pd.concat([qcm_pre2016,qcm_2016_2017], sort=False)
 
             qcm['time']=qcm['Date (PST)'] + np.timedelta64(8,'h') + self.qcm_time_offset # Shift to UTC.
+
+            print(f"Range of QCM data: {qcm.time.values[0]} to {qcm.time.values[-1]}")
+            
             # These are both NAVD88, converted ft=>m
             # Prefer the modified data when available:
             ocean_modified=qcm['Modified Ocean Level (feet NAVD88)']
@@ -867,11 +871,12 @@ class PescaButanoMixin(PescaButanoBaseMixin):
             qcm['wave_overtop']= qcm['Modeled wave overtopping'] * 0.02831685 # from ft3/s to m3/s
             qcm['flow_inlet']=qcm['Modeled inlet flow']* 0.02831685
 
-            # Currently missing ET and wave overtopping before 2016. Fill with 0 to let testing
-            # progress.
-            print("WARNING: filling missing wave and ET fluxes with 0.0!!!!")
-            qcm['wave_overtop'].fillna(value=0.0,inplace=True)
-            qcm['evapotr_mmhour'].fillna(value=0.0,inplace=True)
+            for fld in ['wave_overtop','evapotr_mmhour']:
+                missing=qcm[fld].isnull()
+                if np.any(missing):
+                    frac_null=missing.values.sum() / len(missing)
+                    print(f"WARNING: filling missing {fld} data with 0.0 for {frac_null*100:.2f}% of data")
+                    qcm[fld].fillna(value=0.0,inplace=True)
             
             ds=xr.Dataset.from_dataframe(qcm[ 
                 ['time','z_ocean','z_thalweg','w_inlet','seepage_abs','evapotr_mmhour','wave_overtop',

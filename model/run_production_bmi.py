@@ -198,7 +198,8 @@ def main(argv=None):
     parser.add_argument('--mdu',help='Path to MDU file when run as BMI task')
 
     # -n only used for driver_main, not --bmi
-    parser.add_argument('-n','--num-cores',help='Number of cores',default=32)
+    parser.add_argument('-n','--num-cores',help='Number of cores',default=32,
+                        type=int)
     
     # Get the MPI flavor just to know how to identify rank
     parser.add_argument("-m", "--mpi", help="Enable MPI flavor",default=None)
@@ -287,18 +288,20 @@ def driver_main(args):
     # Back to some long runs to see if everything is working.
     # v14: slr0ft, long run. CFLMax back to 0.7, hold breath
     #      slr2ft, long run.
-    model=PescaBmiSeepage(run_start=np.datetime64("2013-03-22 12:00"),
-                          run_stop=np.datetime64("2014-03-08 00:00"),
-                          # run_stop=np.datetime64("2013-06-15 00:00"), # DBG
-                          run_dir="data_2013-2d-slr2ft-v14",
-                          flow_regime='impaired',
-                          terrain='asbuilt',
-                          slr=2*0.3048,
-                          salinity=False, # set both to false to force 2D
-                          temperature=False,
-                          nlayers_3d=1, # 2D-ish
-                          z_max=3.0,z_min=-0.5,
-                          extraresistance=8)
+    # model=PescaBmiSeepage(run_start=np.datetime64("2013-03-22 12:00"),
+    #                       run_stop=np.datetime64("2014-03-08 00:00"),
+    #                       # run_stop=np.datetime64("2013-06-15 00:00"), # DBG
+    #                       run_dir="data_2013-2d-slr2ft-v14",
+    #                       flow_regime='impaired',
+    #                       terrain='asbuilt',
+    #                       slr=2*0.3048,
+    #                       salinity=False, # set both to false to force 2D
+    #                       temperature=False,
+    #                       nlayers_3d=1, # 2D-ish
+    #                       z_max=3.0,z_min=-0.5,
+    #                       extraresistance=8)
+
+    
     model.mdu['geometry','ChangeVelocityAtStructures']=1
     model.mdu['time','AutoTimestepNoStruct']=1
 
