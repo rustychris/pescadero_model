@@ -1,0 +1,9 @@
+Can BMI be used alongside MPI? How does it work?
+ - yes, and it does work.
+ - see mpi_with_bmi.py in dfm_tests.
+ - potentially could duplicate MPI communicator and have proper
+   communication in the script, but compilation becomes tricky since
+   it ties the python libraries to the DFM libaries.
+ - works well enough to read history output on rank 0, and write TIM
+   forcing "just-in-time"
+   
