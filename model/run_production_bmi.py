@@ -122,6 +122,39 @@ class PescaBmiSeepageMixin(object):
             GateOpeningWidth=0.0, # gate does not open
         )
 
+    def add_butano_weir_structure(self):
+        # With SLR runs, ran into stability problems at Butano weir.
+        # It looks a bit like the PCH instability, so will try the same fix.
+        self.add_Structure(
+            type='generalstructure',
+            name='butano_weir',
+            Upstream2Width=10,                 	# Width left side of structure (m)
+            Upstream1Width=10,                 	# Width structure left side (m)
+            CrestWidth=8.0,   	# Width structure centre (m)
+            Downstream1Width=10,                 	# Width structure right side (m)
+            Downstream2Width=10,                 	# Width right side of structure (m)
+            Upstream2Level=-0.5,                   	# Bed level left side of structure (m AD)
+            Upstream1Level=-0.5,                   	# Bed level left side structure (m AD)
+            CrestLevel=2.0,	# Bed level at centre of structure (m AD)
+            Downstream1Level=-0.5,                   	# Bed level right side structure (m AD)
+            Downstream2Level=-0.5,                   	# Bed level right side of structure (m AD)
+            GateLowerEdgeLevel=0.0, # elevation of top of culvert
+            pos_freegateflowcoeff=1,                   	# Positive free gate flow (-)
+            pos_drowngateflowcoeff=1,                   	# Positive drowned gate flow (-)
+            pos_freeweirflowcoeff=1,                   	# Positive free weir flow (-)
+            pos_drownweirflowcoeff=1,                   	# Positive drowned weir flow (-)
+            pos_contrcoeffreegate=1,                   	# Positive flow contraction coefficient (-)
+            neg_freegateflowcoeff=1,                   	# Negative free gate flow (-)
+            neg_drowngateflowcoeff=1,                  	# Negative drowned gate flow (-)
+            neg_freeweirflowcoeff=1,                   	# Negative free weir flow (-)
+            neg_drownweirflowcoeff=1,                   	# Negative drowned weir flow (-)
+            neg_contrcoeffreegate=1,                   	# Negative flow contraction coefficient (-)
+            extraresistance=1.0,                   	# Extra resistance (-)
+            GateHeight=1.0, # should be below crest, and ignored
+            GateOpeningWidth=0.0, # gate does not open
+        )
+
+        
     # BMI risky business
     seepages=['seepage']
     
@@ -200,7 +233,24 @@ def main(argv=None):
     # -n only used for driver_main, not --bmi
     parser.add_argument('-n','--num-cores',help='Number of cores',default=32,
                         type=int)
+
+    parser.add_argument('-s','--scenario',help='Select scenario (scen1,scen2,scen2)',
+                        default='')
+
+    parser.add_argument('-f','--flow-regime',help='Select flow regime (impaired, unimpaired)',
+                        default='impaired')
     
+    parser.add_argument('-p','--period',help='Select run period (2013, 2016)',
+                        default='2016',type=str)
+
+    parser.add_argument('-t','--three-d',help='Run in 3D',
+                        action='store_true')
+    
+    parser.add_argument('-r','--run-dir',help='override default run_dir',
+                        default=None,type=str)
+
+    parser.add_argument('--slr',help='Sea level rise offset in meters',default=0.0,type=float)
+
     # Get the MPI flavor just to know how to identify rank
     parser.add_argument("-m", "--mpi", help="Enable MPI flavor",default=None)
 
@@ -214,23 +264,69 @@ def main(argv=None):
 
 def driver_main(args):
     import pesca_base # this is going to be problematic
+    import nm_scenarios
     import local_config
     
-    class PescaBmiSeepage(PescaBmiSeepageMixin,pesca_base.PescaButano):
+    class PescaBmiSeepage(nm_scenarios.NMScenarioMixin,PescaBmiSeepageMixin,pesca_base.PescaButano):
         pass
 
-    model=PescaBmiSeepage(run_start=np.datetime64("2016-07-15 00:00"),
-                          run_stop=np.datetime64("2016-12-16 00:00"),
-                          run_dir="data-2016-3d-asbuilt-impaired-v06",
-                          flow_regime='impaired',
-                          terrain='asbuilt',
-                          salinity=True,
-                          num_procs=args.num_cores,
-                          temperature=True,
-                          nlayers_3d=100,
-                          z_max=3.0,z_min=-0.5,
-                          extraresistance=8)
+    kwargs=dict(terrain='asbuilt',
+                z_max=3.0,z_min=-0.5,
+                extraresistance=8,
+                scenario=args.scenario,
+                num_procs=args.num_cores,
+                nlayers_3d=100,
+                flow_regime=args.flow_regime)
+        
+    run_dir="data"
 
+    if args.period=='2016':
+        kwargs['run_start']=np.datetime64("2016-07-15 00:00")
+        kwargs['run_stop']=np.datetime64("2016-12-16 00:00")
+        run_dir += "_2016"
+    elif args.period=='2013':
+        kwargs['run_start']=np.datetime64("2013-03-22 12:00")
+        kwargs['run_stop']=np.datetime64("2014-03-08 00:00")
+        run_dir += "_2013"
+    else:
+        raise Exception("Unknown period '%s'"%args.period)
+    
+    if args.three_d:
+        kwargs['salinity']=True
+        kwargs['temperature']=True
+        run_dir+="_3d"
+    else:
+        kwargs['salinity']=False
+        kwargs['temperature']=False
+        run_dir+="_2d"
+
+    run_dir+=f"_{kwargs['terrain']}"
+    run_dir+=f"_{args.flow_regime}"
+
+    if kwargs['scenario']!='':
+        run_dir+=f"_{kwargs['scenario']}"
+
+    if args.slr!=0.0:
+        kwargs['slr']=args.slr
+        run_dir+=f"_slr{args.slr:.2f}m"
+        
+    if args.run_dir is not None:
+        run_dir=args.run_dir
+
+    suffix=0
+    for suffix in range(100):
+        if suffix==0:
+            test_dir=run_dir
+        else:
+            test_dir=run_dir+f"-v{suffix:03d}"
+        if not os.path.exists(test_dir):
+            kwargs['run_dir']=test_dir
+            break
+    else:
+        raise Exception("Failed to find unique run dir (%s)"%test_dir)
+    
+    model=PescaBmiSeepage(**kwargs)
+    
     # First go at 2013, very long, will start in 2D. Wind was probably not working for this.
     # model=PescaBmiSeepage(run_start=np.datetime64("2013-03-22 12:00"),
     #                       run_stop=np.datetime64("2014-03-08 00:00"),
@@ -293,6 +389,7 @@ def driver_main(args):
     #                       # run_stop=np.datetime64("2013-06-15 00:00"), # DBG
     #                       run_dir="data_2013-2d-slr2ft-v14",
     #                       flow_regime='impaired',
+    #                       scenario=args.scenario,
     #                       terrain='asbuilt',
     #                       slr=2*0.3048,
     #                       salinity=False, # set both to false to force 2D
@@ -300,7 +397,6 @@ def driver_main(args):
     #                       nlayers_3d=1, # 2D-ish
     #                       z_max=3.0,z_min=-0.5,
     #                       extraresistance=8)
-
     
     model.mdu['geometry','ChangeVelocityAtStructures']=1
     model.mdu['time','AutoTimestepNoStruct']=1
