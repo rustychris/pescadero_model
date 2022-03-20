@@ -135,6 +135,8 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
             return super(PescaButanoBaseMixin,self).infer_initial_water_level()
             
     def set_grid_and_features(self):
+        self.log.info("Top of pesca_base set_grid_and_features")
+        
         # For now the only difference is the DEM. If they diverge, might go
         # with separate grid directories instead (maybe with some common features)
         self.grid_dir=grid_dir=os.path.join(local_config.model_dir,"../grids/pesca_butano_v04")

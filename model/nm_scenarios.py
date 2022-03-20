@@ -14,10 +14,13 @@ class NMScenarioMixin(object):
         super().set_grid_and_features()
 
         # Is there a scenario-specific DEM overlay?
-        if self.scenario=="": return
+        if self.scenario=="":
+            self.log.info("set_grid_and_features: Using base scenario.")
+            return
 
         scen_overlay=os.path.join(local_config.bathy_dir,self.scenario,'output_res1.tif')
         if os.path.exists(scen_overlay):
+            self.log.info("set_grid_and_features: Applying overlay %s"%scen_overlay)
             self.apply_dem_overlay(scen_overlay)
         else:
             self.log.info(f"Scenario {self.scenario} does not have a DEM overlay")
@@ -53,10 +56,12 @@ class NMScenarioMixin(object):
             self.log.info("Setting bathymetry overlay for scenario %s"%self.scenario)
 
             alpha=np.linspace(0,1,5)
-            edge_z_min=np.full( (g.Nedges(),3), np.nan, np.float64)
+            edge_z_min=np.full( g.Nedges(), np.nan, np.float64)
 
-            # Find min/max/mean depth of each edge:
+            # Find min depth of each edge:
             edge_select=self.grid.edge_clip_mask(dem.extents)
+
+            self.log.info("Checking %d edges for new depth"%(edge_select.sum()))
             
             for j in utils.progress(np.nonzero(edge_select)[0]):
                 pnts=(alpha[:,None] * g.nodes['x'][g.edges['nodes'][j,0]] +
@@ -64,13 +69,21 @@ class NMScenarioMixin(object):
                 z=dem(pnts)
                 if np.any(np.isnan(z)):
                     continue
-                edge_z_min[j,0]=z.min()
+                edge_z_min[j]=z.min()
 
             z_node=g.nodes['node_z_bed']
+            updates=[]
             for n in utils.progress(range(g.Nnodes())):
                 overlay=edge_z_min[g.node_to_edges(n)].min()
                 if np.isfinite(overlay):
+                    delta=overlay-z_node[n]
+                    if np.abs(delta)<1e-3:
+                        updates.append(np.nan)
+                    else:
+                        updates.append(delta)
                     z_node[n]=overlay
+            self.log.info("Updated %d nodes, %d nonzero, mean change of %.2f"%(len(updates), np.isfinite(updates).sum(),
+                                                                               np.nanmean(updates)))
 
     def add_pch_structure(self):
         if self.scenario=="":
