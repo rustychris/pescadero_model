@@ -561,9 +561,9 @@ def task_main(args):
                     k=0.012 # [m/s] hydraulic conductivity
                     z_bedrock=0.00 # [m]
                     if (h_src>z_bedrock):
-                        Q=-k * (h_src-z_bedrock)*L/W * (h_src-h_dst)
+                        Q=k * (h_src-z_bedrock)*L/W * (h_src-h_dst)
                     else:
-                        Q=-k * (1*0.001)/W           * (h_src-h_dst)
+                        Q=k * (1*0.001)/W           * (h_src-h_dst)
                     Q*=1.65 # extra factor to get matching with QCM.
 
                     logging.info(f"[rank {rank}] t_model={t_now} h_src={h_src:.4f} h_dst={h_dst:.4f} Q={Q:.4f}")
