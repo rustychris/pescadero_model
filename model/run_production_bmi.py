@@ -25,6 +25,7 @@ import xarray as xr
 import subprocess, shutil
 import time
 import logging
+import local_config
 
 os.environ['NUMEXPR_MAX_THREADS']='1'
 
@@ -180,14 +181,11 @@ class PescaBmiSeepageMixin(object):
         # May need to get smarter if there is further subclassing
         real_cmd=['python',__file__,'--bmi']
         options=[]
-        # Not sure I still need to pass in the seepages
-        # for seepage in self.seepages:
-        #     options+=["-s",seepage]
+        
         options += ['--mdu',self.mdu.filename]
 
         if num_procs>1:
-            #real_cmd = real_cmd + ["--mpi=intel"] + options
-            real_cmd = real_cmd + ["--mpi=slurm"] + options
+            real_cmd = real_cmd + ["--mpi=%s"%self.mpi_flavor] + options
             return self.mpirun(real_cmd)
         else:
             real_cmd= real_cmd + options
@@ -231,8 +229,8 @@ def main(argv=None):
     parser.add_argument('--mdu',help='Path to MDU file when run as BMI task')
 
     # -n only used for driver_main, not --bmi
-    parser.add_argument('-n','--num-cores',help='Number of cores',default=32,
-                        type=int)
+    parser.add_argument('-n','--num-cores',help='Number of cores',
+                        default=local_config.LocalConfig.num_procs, type=int)
 
     parser.add_argument('-s','--scenario',help='Select scenario (scen1,scen2,scen2)',
                         default='')
@@ -251,8 +249,8 @@ def main(argv=None):
 
     parser.add_argument('--slr',help='Sea level rise offset in meters',default=0.0,type=float)
 
-    # Get the MPI flavor just to know how to identify rank
-    parser.add_argument("-m", "--mpi", help="Enable MPI flavor",default=None)
+    # Get the MPI flavor to know how to identify rank and start the tasks
+    parser.add_argument("-m", "--mpi", help="Enable MPI flavor",default=local_config.LocalConfig.mpi_flavor)
 
     args = parser.parse_args(argv)
 
@@ -265,7 +263,6 @@ def main(argv=None):
 def driver_main(args):
     import pesca_base # this is going to be problematic
     import nm_scenarios
-    import local_config
     
     class PescaBmiSeepage(nm_scenarios.NMScenarioMixin,PescaBmiSeepageMixin,pesca_base.PescaButano):
         pass
@@ -424,7 +421,7 @@ def task_main(args):
     if args.mpi is None:
         print("args.mpi is None")
         rank=0
-    elif args.mpi in ['intel','slurm']:
+    elif args.mpi in ['mpiexec','mpich','intel','slurm']:
         rank=int(os.environ['PMI_RANK'])
     else:
         raise Exception("Don't know how to find out rank")
