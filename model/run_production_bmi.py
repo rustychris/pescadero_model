@@ -126,6 +126,9 @@ class PescaBmiSeepageMixin(object):
     def add_butano_weir_structure(self):
         # With SLR runs, ran into stability problems at Butano weir.
         # It looks a bit like the PCH instability, so will try the same fix.
+        # on cws-linuxmodeling, seem to have some trouble with this structure
+        # overtopping properly.  besides, the weir is very porous.
+        # so make the top 1m have a 5cm gap
         self.add_Structure(
             type='generalstructure',
             name='butano_weir',
@@ -136,10 +139,10 @@ class PescaBmiSeepageMixin(object):
             Downstream2Width=10,                 	# Width right side of structure (m)
             Upstream2Level=-0.5,                   	# Bed level left side of structure (m AD)
             Upstream1Level=-0.5,                   	# Bed level left side structure (m AD)
-            CrestLevel=2.0,	# Bed level at centre of structure (m AD)
+            CrestLevel=1.0,	# Bed level at centre of structure (m AD)
             Downstream1Level=-0.5,                   	# Bed level right side structure (m AD)
             Downstream2Level=-0.5,                   	# Bed level right side of structure (m AD)
-            GateLowerEdgeLevel=0.0, # elevation of top of culvert
+            GateLowerEdgeLevel=1.0, # elevation of top of culvert
             pos_freegateflowcoeff=1,                   	# Positive free gate flow (-)
             pos_drowngateflowcoeff=1,                   	# Positive drowned gate flow (-)
             pos_freeweirflowcoeff=1,                   	# Positive free weir flow (-)
@@ -152,7 +155,7 @@ class PescaBmiSeepageMixin(object):
             neg_contrcoeffreegate=1,                   	# Negative flow contraction coefficient (-)
             extraresistance=1.0,                   	# Extra resistance (-)
             GateHeight=1.0, # should be below crest, and ignored
-            GateOpeningWidth=0.0, # gate does not open
+            GateOpeningWidth=0.05, # gap to mimic porosity
         )
 
         
@@ -561,7 +564,8 @@ def task_main(args):
                         Q=k * (h_src-z_bedrock)*L/W * (h_src-h_dst)
                     else:
                         Q=k * (1*0.001)/W           * (h_src-h_dst)
-                    Q*=1.65 # extra factor to get matching with QCM.
+                    #Q*=1.65 # extra factor to get matching with QCM.
+                    Q*=0.61 # trying again on that factor
 
                     logging.info(f"[rank {rank}] t_model={t_now} h_src={h_src:.4f} h_dst={h_dst:.4f} Q={Q:.4f}")
                     # That is the last line I see in the log
