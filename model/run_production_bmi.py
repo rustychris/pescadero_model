@@ -128,7 +128,9 @@ class PescaBmiSeepageMixin(object):
         # It looks a bit like the PCH instability, so will try the same fix.
         # on cws-linuxmodeling, seem to have some trouble with this structure
         # overtopping properly.  besides, the weir is very porous.
-        # so make the top 1m have a 5cm gap
+        # so make the top 1m have a 5cm gap.
+        # Aside from accounting for some porosity, this appears to have made
+        # the runs more stable. none of these runs had any issues (at least in 2D).
         self.add_Structure(
             type='generalstructure',
             name='butano_weir',
@@ -241,7 +243,7 @@ def main(argv=None):
     parser.add_argument('-f','--flow-regime',help='Select flow regime (impaired, unimpaired)',
                         default='impaired')
     
-    parser.add_argument('-p','--period',help='Select run period (2013, 2016)',
+    parser.add_argument('-p','--period',help='Select run period (2013, 2016, 2016long)',
                         default='2016',type=str)
 
     parser.add_argument('-t','--three-d',help='Run in 3D',
@@ -249,6 +251,8 @@ def main(argv=None):
     
     parser.add_argument('-r','--run-dir',help='override default run_dir',
                         default=None,type=str)
+
+    # parser.add_argument('-c','--continue',help='continue from existing run')
 
     parser.add_argument('--slr',help='Sea level rise offset in meters',default=0.0,type=float)
 
@@ -284,6 +288,10 @@ def driver_main(args):
         kwargs['run_start']=np.datetime64("2016-07-15 00:00")
         kwargs['run_stop']=np.datetime64("2016-12-16 00:00")
         run_dir += "_2016"
+    elif args.period=='2016long':
+        kwargs['run_start']=np.datetime64("2016-07-01 00:00")
+        kwargs['run_stop']=np.datetime64("2017-02-28 00:00")
+        run_dir += "_2016long"
     elif args.period=='2013':
         kwargs['run_start']=np.datetime64("2013-03-22 12:00")
         kwargs['run_stop']=np.datetime64("2014-03-08 00:00")
