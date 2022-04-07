@@ -25,6 +25,7 @@ import xarray as xr
 import subprocess, shutil
 import time
 import logging
+import local_config
 
 os.environ['NUMEXPR_MAX_THREADS']='1'
 
@@ -125,6 +126,11 @@ class PescaBmiSeepageMixin(object):
     def add_butano_weir_structure(self):
         # With SLR runs, ran into stability problems at Butano weir.
         # It looks a bit like the PCH instability, so will try the same fix.
+        # on cws-linuxmodeling, seem to have some trouble with this structure
+        # overtopping properly.  besides, the weir is very porous.
+        # so make the top 1m have a 5cm gap.
+        # Aside from accounting for some porosity, this appears to have made
+        # the runs more stable. none of these runs had any issues (at least in 2D).
         self.add_Structure(
             type='generalstructure',
             name='butano_weir',
@@ -135,10 +141,10 @@ class PescaBmiSeepageMixin(object):
             Downstream2Width=10,                 	# Width right side of structure (m)
             Upstream2Level=-0.5,                   	# Bed level left side of structure (m AD)
             Upstream1Level=-0.5,                   	# Bed level left side structure (m AD)
-            CrestLevel=2.0,	# Bed level at centre of structure (m AD)
+            CrestLevel=1.0,	# Bed level at centre of structure (m AD)
             Downstream1Level=-0.5,                   	# Bed level right side structure (m AD)
             Downstream2Level=-0.5,                   	# Bed level right side of structure (m AD)
-            GateLowerEdgeLevel=0.0, # elevation of top of culvert
+            GateLowerEdgeLevel=1.0, # elevation of top of culvert
             pos_freegateflowcoeff=1,                   	# Positive free gate flow (-)
             pos_drowngateflowcoeff=1,                   	# Positive drowned gate flow (-)
             pos_freeweirflowcoeff=1,                   	# Positive free weir flow (-)
@@ -151,7 +157,7 @@ class PescaBmiSeepageMixin(object):
             neg_contrcoeffreegate=1,                   	# Negative flow contraction coefficient (-)
             extraresistance=1.0,                   	# Extra resistance (-)
             GateHeight=1.0, # should be below crest, and ignored
-            GateOpeningWidth=0.0, # gate does not open
+            GateOpeningWidth=0.05, # gap to mimic porosity
         )
 
         
@@ -180,14 +186,11 @@ class PescaBmiSeepageMixin(object):
         # May need to get smarter if there is further subclassing
         real_cmd=['python',__file__,'--bmi']
         options=[]
-        # Not sure I still need to pass in the seepages
-        # for seepage in self.seepages:
-        #     options+=["-s",seepage]
+        
         options += ['--mdu',self.mdu.filename]
 
         if num_procs>1:
-            #real_cmd = real_cmd + ["--mpi=intel"] + options
-            real_cmd = real_cmd + ["--mpi=slurm"] + options
+            real_cmd = real_cmd + ["--mpi=%s"%self.mpi_flavor] + options
             return self.mpirun(real_cmd)
         else:
             real_cmd= real_cmd + options
@@ -231,8 +234,8 @@ def main(argv=None):
     parser.add_argument('--mdu',help='Path to MDU file when run as BMI task')
 
     # -n only used for driver_main, not --bmi
-    parser.add_argument('-n','--num-cores',help='Number of cores',default=32,
-                        type=int)
+    parser.add_argument('-n','--num-cores',help='Number of cores',
+                        default=local_config.LocalConfig.num_procs, type=int)
 
     parser.add_argument('-s','--scenario',help='Select scenario (scen1,scen2,scen2)',
                         default='')
@@ -240,7 +243,7 @@ def main(argv=None):
     parser.add_argument('-f','--flow-regime',help='Select flow regime (impaired, unimpaired)',
                         default='impaired')
     
-    parser.add_argument('-p','--period',help='Select run period (2013, 2016)',
+    parser.add_argument('-p','--period',help='Select run period (2013, 2016, 2016long)',
                         default='2016',type=str)
 
     parser.add_argument('-t','--three-d',help='Run in 3D',
@@ -249,10 +252,12 @@ def main(argv=None):
     parser.add_argument('-r','--run-dir',help='override default run_dir',
                         default=None,type=str)
 
+    # parser.add_argument('-c','--continue',help='continue from existing run')
+
     parser.add_argument('--slr',help='Sea level rise offset in meters',default=0.0,type=float)
 
-    # Get the MPI flavor just to know how to identify rank
-    parser.add_argument("-m", "--mpi", help="Enable MPI flavor",default=None)
+    # Get the MPI flavor to know how to identify rank and start the tasks
+    parser.add_argument("-m", "--mpi", help="Enable MPI flavor",default=local_config.LocalConfig.mpi_flavor)
 
     args = parser.parse_args(argv)
 
@@ -265,7 +270,6 @@ def main(argv=None):
 def driver_main(args):
     import pesca_base # this is going to be problematic
     import nm_scenarios
-    import local_config
     
     class PescaBmiSeepage(nm_scenarios.NMScenarioMixin,PescaBmiSeepageMixin,pesca_base.PescaButano):
         pass
@@ -284,6 +288,10 @@ def driver_main(args):
         kwargs['run_start']=np.datetime64("2016-07-15 00:00")
         kwargs['run_stop']=np.datetime64("2016-12-16 00:00")
         run_dir += "_2016"
+    elif args.period=='2016long':
+        kwargs['run_start']=np.datetime64("2016-07-01 00:00")
+        kwargs['run_stop']=np.datetime64("2017-02-28 00:00")
+        run_dir += "_2016long"
     elif args.period=='2013':
         kwargs['run_start']=np.datetime64("2013-03-22 12:00")
         kwargs['run_stop']=np.datetime64("2014-03-08 00:00")
@@ -401,6 +409,9 @@ def driver_main(args):
     model.mdu['geometry','ChangeVelocityAtStructures']=1
     model.mdu['time','AutoTimestepNoStruct']=1
 
+    # 2022-04-06: any chance this helps?
+    model.mdu['numerics','Drop3D']=0.5
+
     model.write()
 
     shutil.copyfile(__file__,os.path.join(model.run_dir,"script.py"))
@@ -424,7 +435,7 @@ def task_main(args):
     if args.mpi is None:
         print("args.mpi is None")
         rank=0
-    elif args.mpi in ['intel','slurm']:
+    elif args.mpi in ['mpiexec','mpich','intel','slurm']:
         rank=int(os.environ['PMI_RANK'])
     else:
         raise Exception("Don't know how to find out rank")

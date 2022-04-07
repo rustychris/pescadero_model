@@ -24,7 +24,7 @@ dems= [
 
 if gen_grids:
     grid_dir="../../../grid"
-    grid_fn=os.path.join(grid_dir,'quad_tri_v21-edit08.nc')
+    grid_fn=os.path.join(grid_dir,'quad_tri_v21-edit11.nc')
     g=unstructured_grid.UnstructuredGrid.read_ugrid(grid_fn)
     g.renumber()
     

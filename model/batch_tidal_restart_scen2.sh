@@ -8,9 +8,7 @@
 #SBATCH --time 3-00:00:00
 
 conda activate general
-# python run_restart_highres.py --mdu data_2016_2d_asbuilt_impaired_scen1/flowfm.mdu --start "2016-08-04T00:00" --duration 36h --suffix rtidal
-python run_restart_highres.py --mdu data_2016_2d_asbuilt_impaired_scen2/flowfm.mdu --start "2016-08-04T00:00" --duration 36h --suffix rtidal
-# python run_restart_highres.py --mdu data_2016_2d_asbuilt_impaired_scen3/flowfm.mdu --start "2016-08-04T00:00" --duration 36h --suffix rtidal
+python run_restart_highres.py --mdu data_2016_2d_asbuilt_impaired_scen2-v001/flowfm.mdu --start "2016-08-04T00:00" --duration 36h --suffix rtidal
 
 
 
