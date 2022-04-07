@@ -409,6 +409,9 @@ def driver_main(args):
     model.mdu['geometry','ChangeVelocityAtStructures']=1
     model.mdu['time','AutoTimestepNoStruct']=1
 
+    # 2022-04-06: any chance this helps?
+    model.mdu['numerics','Drop3D']=0.5
+
     model.write()
 
     shutil.copyfile(__file__,os.path.join(model.run_dir,"script.py"))
