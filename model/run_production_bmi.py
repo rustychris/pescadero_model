@@ -564,8 +564,11 @@ def task_main(args):
                         Q=k * (h_src-z_bedrock)*L/W * (h_src-h_dst)
                     else:
                         Q=k * (1*0.001)/W           * (h_src-h_dst)
-                    Q*=1.65 # extra factor to get matching with QCM.
-
+                    #Q*=1.65 # extra factor to get matching with QCM.
+                    Q=max(0,Q*0.61) # 1.65 was from scatters. but looking at the time series coming out of
+                    # the runs, this calculated flux was almost 3x too large. the 0.61 comes from scaling
+                    # the previous output to best match the QCM fluxes (as output by the v04 model).
+                    # Also go ahead and follow the one-directional flow that Dane suggested.
                     logging.info(f"[rank {rank}] t_model={t_now} h_src={h_src:.4f} h_dst={h_dst:.4f} Q={Q:.4f}")
                     # That is the last line I see in the log
                 else:
