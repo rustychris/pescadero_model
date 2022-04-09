@@ -137,7 +137,7 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
     def set_grid_and_features(self):
         # For now the only difference is the DEM. If they diverge, might go
         # with separate grid directories instead (maybe with some common features)
-        grid_dir=os.path.join(local_config.model_dir,"../grids/pesca_butano_v04")
+        self.grid_dir=grid_dir=os.path.join(local_config.model_dir,"../grids/pesca_butano_v04")
         self.set_grid(os.path.join(grid_dir, f"pesca_butano_{self.terrain}_deep_bathy.nc"))
         self.add_gazetteer(os.path.join(grid_dir,"line_features.shp"))
         self.add_gazetteer(os.path.join(grid_dir,"point_features.shp"))
@@ -146,10 +146,7 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
         # Check for and install fixed_weirs
         # Updated to now force this, to avoid hidden discrepancies
         fixed_weir_fn=os.path.join(grid_dir,f"fixed_weirs-{self.terrain}.pliz")
-        #if os.path.exists(fixed_weir_fn):
         self.fixed_weirs=dio.read_pli(fixed_weir_fn)
-        #else:
-        #   self.log.warning(f"No fixed weir found ({fixed_weir_fn})")
 
     def friction_geometries(self):
         return self.match_gazetteer(geom_type='Polygon',type=type)
