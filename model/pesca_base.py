@@ -15,7 +15,7 @@ import stompy.model.delft.io as dio
 import stompy.model.hydro_model as hm
 from stompy.io.local import cdip_mop
 from stompy import utils, filters
-from stompy.spatial import linestring_utils
+from stompy.spatial import linestring_utils, wkb2shp
 from shapely import geometry
 import local_config
 
@@ -38,6 +38,8 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
     terrain='existing'
     # scenario=...
     slr=0.0 # [m] applied in prep_qcm_dataset to ocean, lagoon and thalweg elevations
+    slr_raise_inlet=True # adjust the nearshore and part of inlet up by SLR, too
+    
     salinity=True
     temperature=True
     # if salinity or temperature are included, then use this
@@ -147,6 +149,21 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
         # Updated to now force this, to avoid hidden discrepancies
         fixed_weir_fn=os.path.join(grid_dir,f"fixed_weirs-{self.terrain}.pliz")
         self.fixed_weirs=dio.read_pli(fixed_weir_fn)
+
+        if self.slr!=0.0 and self.slr_raise_inlet:
+            self.raise_inlet(self.slr)
+
+    def raise_inlet(self,slr):
+        scen_shp=wkb2shp.shp2geom(os.path.join(local_config.bathy_dir,"dem-scenarios.shp"))
+        poly=scen_shp['geom'][ scen_shp['src_name']=='slr_region'][0]
+        inlet_nodes=self.grid.select_nodes_intersecting(poly)
+        max_dist=25.0
+        dists=self.grid.distance_transform_nodes(inlet_nodes,max_dist)
+        weights=(max_dist-dists).clip(0) / max_dist
+        assert np.all( np.isfinite(weights) )
+        assert weights.max()<=1.0
+        assert weights.min()>=0.0
+        self.grid.nodes['node_z_bed'][:] += weights*self.slr
 
     def friction_geometries(self):
         return self.match_gazetteer(geom_type='Polygon',type=type)

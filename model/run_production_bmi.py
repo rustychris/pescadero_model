@@ -252,6 +252,8 @@ def main(argv=None):
     parser.add_argument('-r','--run-dir',help='override default run_dir',
                         default=None,type=str)
 
+    parser.add_argument('-l','--layers',help='Number of z layers',default=50,type=int)
+
     # parser.add_argument('-c','--continue',help='continue from existing run')
 
     parser.add_argument('--slr',help='Sea level rise offset in meters',default=0.0,type=float)
@@ -279,7 +281,7 @@ def driver_main(args):
                 extraresistance=8,
                 scenario=args.scenario,
                 num_procs=args.num_cores,
-                nlayers_3d=100,
+                nlayers_3d=args.layers,
                 flow_regime=args.flow_regime)
         
     run_dir="data"
@@ -317,7 +319,7 @@ def driver_main(args):
     if args.slr!=0.0:
         kwargs['slr']=args.slr
         run_dir+=f"_slr{args.slr:.2f}m"
-        
+
     if args.run_dir is not None:
         run_dir=args.run_dir
 

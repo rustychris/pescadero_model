@@ -1,0 +1,8 @@
+#!/bin/bash
+
+#for f in `find . -type d -name 'data_*' -ctime -5` ; do 
+for dia_filename in `find . -path "./data_*/DFM_OUTPUT*/flowfm*_0000.dia" -mmin -10` ; do
+	dirname $dia_filename
+	tail -5000 $dia_filename | grep % | tail -1 
+	echo
+done
