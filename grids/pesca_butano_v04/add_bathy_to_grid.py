@@ -24,6 +24,7 @@ dems= [
 
 if gen_grids:
     grid_dir="../../../grid"
+    # edt16 was supposed to be better, but it appears to be very slow to solve
     grid_fn=os.path.join(grid_dir,'quad_tri_v21-edit12.nc')
     g=unstructured_grid.UnstructuredGrid.read_ugrid(grid_fn)
     g.renumber()

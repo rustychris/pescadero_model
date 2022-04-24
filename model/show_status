@@ -1,8 +1,12 @@
 #!/bin/bash
 
 #for f in `find . -type d -name 'data_*' -ctime -5` ; do 
-for dia_filename in `find . -path "./data_*/DFM_OUTPUT*/flowfm*_0000.dia" -mmin -60` ; do
-	dirname $dia_filename
+for dia_filename in `find . -path "./data_*/DFM_OUTPUT*/flowfm*_0000.dia" -mmin -10` ; do
+	RUN=`dirname $dia_filename`
+	RUN=`dirname $RUN`
+	echo $RUN
 	tail -5000 $dia_filename | grep % | tail -1 
+
+	grep -l `basename $RUN`/ slurm*
 	echo
 done

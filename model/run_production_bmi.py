@@ -32,6 +32,14 @@ os.environ['NUMEXPR_MAX_THREADS']='1'
 class PescaBmiSeepageMixin(object):
     extraresistance=8.0
 
+    evap=False
+
+    def set_atmospheric_bcs(self):
+        if self.evap:
+            super().set_atmospheric_bcs()
+        else:
+            self.log.warning("Evaporation is disabled")
+    
     def configure_global(self):
         super().configure_global()
         
@@ -412,6 +420,9 @@ def driver_main(args):
     model.mdu['time','AutoTimestepNoStruct']=1
 
     # 2022-04-06: any chance this helps?
+    #  I think it helped a small amount, but may also have introduced
+    #  salinity issues? New runs without this are painful, though with
+    #  farm performance being unpredictable it's hard to sort out.
     model.mdu['numerics','Drop3D']=0.5
 
     model.write()
