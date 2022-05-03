@@ -50,7 +50,11 @@ class PescaBmiSeepageMixin(object):
         self.mdu['output','MapInterval']=2*86400
         # history was 6G, and stays about the same.
         self.mdu['output','Wrihis_temperature']=0
-    
+
+        # DBG: maybe having a non-default value here is problematic?
+        self.log.warning("Leave Epshu to default value")
+        del self.mdu['numerics','Epshu'] # 5mm wet/dry threshold
+
     def add_mouth_structure(self):
         """
         Set up flow control structure for the inner and outer mouth structures
@@ -427,8 +431,9 @@ def driver_main(args):
 
     model.write()
 
-    shutil.copyfile(__file__,os.path.join(model.run_dir,"script.py"))
+    shutil.copyfile(__file__,os.path.join(model.run_dir,os.path.basename(__file__)))
     shutil.copyfile("pesca_base.py",os.path.join(model.run_dir,"pesca_base.py"))
+    shutil.copyfile("local_config.py",os.path.join(model.run_dir,"local_config.py"))
 
     model.partition()
 

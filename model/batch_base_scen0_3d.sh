@@ -8,7 +8,7 @@
 #SBATCH --time 20-00:00:00
 
 conda activate general
-python run_production_bmi.py -n 32 --three-d -p 2016long -f impaired -l 100
+python run_production_bmi.py -n 32 --three-d -p 2016long -f impaired -l 50
 
 
 
