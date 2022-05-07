@@ -52,8 +52,8 @@ class PescaBmiSeepageMixin(object):
         self.mdu['output','Wrihis_temperature']=0
 
         # DBG: maybe having a non-default value here is problematic?
-        self.log.warning("Leave Epshu to default value")
-        del self.mdu['numerics','Epshu'] # 5mm wet/dry threshold
+        #self.log.warning("Leave Epshu to default value")
+        #del self.mdu['numerics','Epshu'] # 5mm wet/dry threshold
 
     def add_mouth_structure(self):
         """
@@ -260,6 +260,8 @@ def main(argv=None):
 
     parser.add_argument('-t','--three-d',help='Run in 3D',
                         action='store_true')
+
+    parser.add_argument('--terrain',default='asbuilt',help='Select base terrain DEM')
     
     parser.add_argument('-r','--run-dir',help='override default run_dir',
                         default=None,type=str)
@@ -288,7 +290,7 @@ def driver_main(args):
     class PescaBmiSeepage(nm_scenarios.NMScenarioMixin,PescaBmiSeepageMixin,pesca_base.PescaButano):
         pass
 
-    kwargs=dict(terrain='asbuilt',
+    kwargs=dict(terrain=args.terrain,
                 z_max=3.0,z_min=-0.5,
                 extraresistance=8,
                 scenario=args.scenario,
@@ -315,7 +317,7 @@ def driver_main(args):
     
     if args.three_d:
         kwargs['salinity']=True
-        kwargs['temperature']=True
+        kwargs['temperature']=False # try to save some time
         run_dir+="_3d"
     else:
         kwargs['salinity']=False
@@ -419,16 +421,25 @@ def driver_main(args):
     #                       nlayers_3d=1, # 2D-ish
     #                       z_max=3.0,z_min=-0.5,
     #                       extraresistance=8)
-    
-    model.mdu['geometry','ChangeVelocityAtStructures']=1
+
+    # still chasing things down...
+    # model.mdu['geometry','ChangeVelocityAtStructures']=1
     model.mdu['time','AutoTimestepNoStruct']=1
 
     # 2022-04-06: any chance this helps?
     #  I think it helped a small amount, but may also have introduced
     #  salinity issues? New runs without this are painful, though with
     #  farm performance being unpredictable it's hard to sort out.
-    model.mdu['numerics','Drop3D']=0.5
-
+    # 2022-05-05: testing with short runs, nonzero value here was actually
+    #  slower, and salinity no better. But in the early parts of the run
+    #  it appears essential to include this, otherwise the first part of the
+    #  the run is extremely slow.
+    model.mdu['numerics','Drop3D']=-999
+    # Try dropping this -- maybe that's what is causing these runs to be so slow.
+    # model.mdu['numerics','Keepzlayeringatbed']=0
+    # Praying that 0.5 is magic threshold.
+    model.mdu['numerics','CFLMax'] = 0.7
+    
     model.write()
 
     shutil.copyfile(__file__,os.path.join(model.run_dir,os.path.basename(__file__)))
