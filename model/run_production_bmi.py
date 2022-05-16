@@ -17,14 +17,10 @@ srun --partition high2 --mpi=pmi2 --mem-per-cpu 4G -n 32 -N 1 --time 1:00:00 pyt
 Seems that loading libdflowfm.so conflicts with some aspect of netCDF4 and ogr/osr.
 Refactor such that BMI invocation imports very little.
 """
-import sys
-import os
+import sys, os, glob, time, logging, subprocess, shutil
 import numpy as np
 from stompy import utils
 import xarray as xr
-import subprocess, shutil
-import time
-import logging
 import local_config
 
 os.environ['NUMEXPR_MAX_THREADS']='1'
@@ -270,6 +266,8 @@ def main(argv=None):
 
     # parser.add_argument('-c','--continue',help='continue from existing run')
 
+    parser.add_argument('--debug-salt',help="Set all salt values to 32",action='store_true')
+
     parser.add_argument('--slr',help='Sea level rise offset in meters',default=0.0,type=float)
 
     # Get the MPI flavor to know how to identify rank and start the tasks
@@ -296,6 +294,7 @@ def driver_main(args):
                 scenario=args.scenario,
                 num_procs=args.num_cores,
                 nlayers_3d=args.layers,
+                debug_salt=args.debug_salt,
                 flow_regime=args.flow_regime)
         
     run_dir="data"
@@ -312,6 +311,10 @@ def driver_main(args):
         kwargs['run_start']=np.datetime64("2013-03-22 12:00")
         kwargs['run_stop']=np.datetime64("2014-03-08 00:00")
         run_dir += "_2013"
+    elif "," in args.period:
+        arg_start,arg_stop=args.period.split(',')
+        kwargs['run_start']=np.datetime64(arg_start)
+        kwargs['run_stop']=np.datetime64(arg_stop)
     else:
         raise Exception("Unknown period '%s'"%args.period)
     
@@ -438,13 +441,28 @@ def driver_main(args):
     # Try dropping this -- maybe that's what is causing these runs to be so slow.
     # model.mdu['numerics','Keepzlayeringatbed']=0
     # Praying that 0.5 is magic threshold.
-    model.mdu['numerics','CFLMax'] = 0.7
-    
+    model.mdu['numerics','CFLMax'] = 0.40
+
+    model.mdu['output','MbaInterval'] = 43200
+    model.mdu['output','MbaWriteCSV'] = 1
+    model.mdu['time','Timestepanalysis'] = 1 # temporary
+
     model.write()
 
     shutil.copyfile(__file__,os.path.join(model.run_dir,os.path.basename(__file__)))
     shutil.copyfile("pesca_base.py",os.path.join(model.run_dir,"pesca_base.py"))
     shutil.copyfile("local_config.py",os.path.join(model.run_dir,"local_config.py"))
+    with open(os.path.join(model.run_dir,"cmdlne"),'wt') as fp:
+        fp.write(str(args))
+        fp.write("\n")
+        fp.write(" ".join(sys.argv))
+
+    # Recent DFM has problems reading cached data -- leads to freeze.
+    for f in glob.glob(os.path.join(model.run_dir,'*.cache')):
+        os.unlink(f)
+    if 'SLURM_JOB_ID' in os.environ:
+        with open(os.path.join(model.run_dir,'job_id'),'wt') as fp:
+            fp.write(f"{os.environ['SLURM_JOB_ID']}\n")
 
     model.partition()
 
@@ -473,6 +491,8 @@ def task_main(args):
     logging.basicConfig(filename=log_fn, level=logging.DEBUG)
     logging.debug("Top of task_main")
     logging.debug('This message should go to the log file')
+
+    logging.debug(f"PID {os.getpid()}  rank {rank}")
     
     import local_config
     import bmi.wrapper
@@ -536,6 +556,8 @@ def task_main(args):
     # initialize changes working directory to where mdu is.
     logging.info(f"[{rank}] about to initialize")
     sim.initialize(args.mdu)
+    
+    logging.info(f"[{rank}] initialized")
 
     if rank==0:
         if args.mpi is None:
@@ -547,7 +569,7 @@ def task_main(args):
         for waiting in range(10):
             if os.path.exists(hist_fn):
                 break
-            logging("Will sleep to wait for hist_fn")
+            logging.info("Will sleep to wait for hist_fn")
             sys.stdout.flush()
             time.sleep(2.0)
         else:
