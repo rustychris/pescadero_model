@@ -20,9 +20,8 @@ export LD_LIBRARY_PATH=$PREFIX/lib:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=$DFM_ROOT/lib:$LD_LIBRARY_PATH
 
 uptime
-mpiexec -info
 
-python run_production_bmi.py -n 32 --three-d -p 2016-08-21,2016-08-21T06:00 --terrain asbuilt -f impaired -l 50 
+python run_production_bmi.py -n 32 --three-d -p 2016long --terrain asbuilt -f impaired -l 30
 
 
 

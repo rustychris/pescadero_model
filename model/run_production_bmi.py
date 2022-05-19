@@ -445,7 +445,7 @@ def driver_main(args):
 
     model.mdu['output','MbaInterval'] = 43200
     model.mdu['output','MbaWriteCSV'] = 1
-    model.mdu['time','Timestepanalysis'] = 1 # temporary
+    # model.mdu['time','Timestepanalysis'] = 1 # temporary
 
     model.write()
 
