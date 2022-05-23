@@ -8,7 +8,11 @@
 #SBATCH --time 20-00:00:00
 
 conda activate general
-python run_production_bmi.py -n 32 --three-d -p 2016long -f impaired -l 60
+export DFM_ROOT=/home/rustyh/src/dfm/delft3dfm_2022.02/lnx64
+uptime
+
+python run_production_bmi.py -n 16 --three-d -p 2016long --terrain asbuilt -f impaired -l 30
+
 
 
 

@@ -28,7 +28,7 @@ os.environ['NUMEXPR_MAX_THREADS']='1'
 class PescaBmiSeepageMixin(object):
     extraresistance=8.0
 
-    evap=False
+    evap=True
 
     def set_atmospheric_bcs(self):
         if self.evap:
@@ -268,6 +268,8 @@ def main(argv=None):
 
     parser.add_argument('--debug-salt',help="Set all salt values to 32",action='store_true')
 
+    parser.add_argument('--temperature',help="Enable temperature",action='store_true')
+
     parser.add_argument('--slr',help='Sea level rise offset in meters',default=0.0,type=float)
 
     # Get the MPI flavor to know how to identify rank and start the tasks
@@ -320,11 +322,11 @@ def driver_main(args):
     
     if args.three_d:
         kwargs['salinity']=True
-        kwargs['temperature']=False # try to save some time
+        kwargs['temperature']=args.temperature # try to save some time
         run_dir+="_3d"
     else:
         kwargs['salinity']=False
-        kwargs['temperature']=False
+        kwargs['temperature']=args.temperature
         run_dir+="_2d"
 
     run_dir+=f"_{kwargs['terrain']}"
