@@ -25,6 +25,6 @@ export LD_LIBRARY_PATH=$DFM_ROOT/lib:$LD_LIBRARY_PATH
 uptime
 cat /proc/cpuinfo | grep -e 'model name' | head -1
 
-python run_production_bmi.py -n 16 --three-d -p 2016long --terrain asbuilt -f impaired --slr 0.6096 -l 30
+python run_production_bmi.py -n 16 --three-d -p 2016long --terrain asbuilt -f impaired -s scen1 --slr 0.6096 -l 30
 
 
