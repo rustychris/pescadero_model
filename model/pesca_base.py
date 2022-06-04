@@ -106,7 +106,7 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
             self.mdu['physics','Idensform']=2 # UNESCO
             self.mdu['numerics','TurbulenceModel']=3 # 0: breaks, 1: constant,  3: k-eps
             self.mdu['physics','Dicoww']=1e-8
-            self.mdu['physics','Vicoww']=1e-7
+            self.mdu['physics','Vicoww']=1e-6 # used to be 1e-7, but isn't 1e-6 more appropriate?
         else:
             self.mdu['physics','Idensform']=0 # no density effects
 

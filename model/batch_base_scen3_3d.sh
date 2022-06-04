@@ -2,8 +2,8 @@
 #SBATCH --job-name pesca
 #SBATCH -o slurm_out-%j.output
 #SBATCH -e slurm_out-%j.output
-#SBATCH --partition high
-#SBATCH -n 16
+#SBATCH --partition high2
+#SBATCH -n 32
 #SBATCH -N 1
 #SBATCH --time 20-00:00:00
 
@@ -21,6 +21,6 @@ export LD_LIBRARY_PATH=$DFM_ROOT/lib:$LD_LIBRARY_PATH
 
 uptime
 
-python run_production_bmi.py -n 16 --three-d -p 2016long --terrain asbuilt -f impaired -s scen3 -l 30
+python run_production_bmi.py -n 16 --three-d -p 2016long --terrain asbuilt -f impaired -s scen3 -l 100
 
 

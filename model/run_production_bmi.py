@@ -51,6 +51,11 @@ class PescaBmiSeepageMixin(object):
         #self.log.warning("Leave Epshu to default value")
         #del self.mdu['numerics','Epshu'] # 5mm wet/dry threshold
 
+        # temporary: test larger diffusivity
+        # did not look better, though the bed layer showed a bit more range.
+        # self.mdu['physics','Dicoww']=1e-7
+        # Waiting to see results to decide if this is good or bad.
+
     def add_mouth_structure(self):
         """
         Set up flow control structure for the inner and outer mouth structures
