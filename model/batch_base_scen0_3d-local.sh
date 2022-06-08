@@ -21,4 +21,4 @@ export LD_LIBRARY_PATH=$DFM_ROOT/lib:$LD_LIBRARY_PATH
 
 uptime
 
-python run_production_bmi.py -n 16 --three-d -p 2016long --terrain asbuilt -f impaired -l 100 
+python run_production_bmi.py -n 16 --three-d -p 2016long --terrain asbuilt -f impaired -l 30 
