@@ -35,9 +35,12 @@ def main(argv=None):
     
     # Alter settings as needed
     # For now assume we want roughly "full" output
-    # model.mdu['output','mapinterval'] = 60*60 # hour
+    model.mdu['output','mapinterval'] = 6*60 # 6 minutes
     # model.mdu['output','Wrimap_velocity_vector'] = 1
     # model.mdu['output','Wrimap_turbulence']=1
+    model.mdu['time','TimeStepAnalysis']=1
+    model.mdu['output','Wrimap_volume1']=1
+    model.mdu['output','Wrimap_flow_analysis']=1 # is this real?
 
     model.update_config()
     model.mdu.write()
