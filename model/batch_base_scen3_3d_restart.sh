@@ -25,6 +25,7 @@ export LD_LIBRARY_PATH=$DFM_ROOT/lib:$LD_LIBRARY_PATH
 
 uptime
 
-python run_restart_debug_salt.py --suffix r001 --mdu data_2016long_3d_asbuilt_impaired_scen3-v003/flowfm.mdu --start 2017-01-07 --duration 1h
+#python run_restart_debug_salt.py --suffix r001 --mdu data_2016long_3d_asbuilt_impaired_scen3-v003/flowfm.mdu --start 2017-01-07 --duration 1h
+python run_production_bmi.py --mdu data_2016long_3d_asbuilt_impaired_scen3-v003/flowfm.mdu --resume -p 2016long 
 
 
