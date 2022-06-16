@@ -298,7 +298,8 @@ def main(argv=None):
     # Get the MPI flavor to know how to identify rank and start the tasks
     parser.add_argument("-m", "--mpi", help="Enable MPI flavor",default=local_config.LocalConfig.mpi_flavor)
 
-    parser.add_argument("--resume",help="Resume a run from last restart time",action='store_true')
+    parser.add_argument("--resume",help="Resume a run from last restart time, or a YYYY-MM-DDTHH:MM:SS timestamp if given",
+                        const='last',default=None,nargs='?')
 
     args = parser.parse_args(argv)
 
@@ -380,25 +381,50 @@ def driver_main(args):
     else:
         raise Exception("Failed to find unique run dir (%s)"%test_dir)
 
-    if args.resume:
+    if args.resume is not None:
         old_model=PescaBmiSeepage.load(args.mdu)
-        # Choose suffix:
-        for suffidx in range(10):
-            suffix=f"_r{suffidx:02d}"
-            if not os.path.exists(args.mdu.replace('.mdu',suffix+".mdu")):
-                break
+        deep=True
+
+        if not deep:
+            # Choose suffix:
+            for suffidx in range(10):
+                suffix=f"_r{suffidx:02d}"
+                if not os.path.exists(args.mdu.replace('.mdu',suffix+".mdu")):
+                    break
+            else:
+                # no real limit, but probably a sign of a bug.
+                raise Exception("Too many restarts - ran out of suffixes")
+            model=old_model.create_restart(deep=deep,mdu_suffix=suffix)
         else:
-            # no real limit, but probably a sign of a bug.
-            raise Exception("Too many restarts - ran out of suffixes")
-        model=old_model.create_restart(deep=False,mdu_suffix=suffix)
+            # debug runs were using deep=False, but here we're invoking all the
+            # machinery, seems like a deep restart would be appropriate.
+            # in that case, need a new run_dir:
+            # HERE -- construct a run_dir and figure out how to pass it in, and make
+            # sure model class is correct.
+            parent_dir=os.path.dirname(args.mdu)
+            for suffidx in range(10):
+                suffix=f"_r{suffidx:02d}"
+                run_dir=parent_dir+suffix
+                if not os.path.exists(run_dir):
+                    break
+            else:
+                # no real limit, but probably a sign of a bug.
+                raise Exception("Too many restarts - ran out of suffixes")
+            model=old_model.create_restart(deep=deep)
+            model.set_run_dir(run_dir,mode='noclobber')
+
         # selectively pull in kwargs
         # ignore terrain z_max z_min scenario num_procs, nlayers_3d, flow_regime
         #    run_start salinity temperature slr
         # extraresistance: could include.
         #  include run_stop
         # For now, run_start defaults to last restart file.
-        # to choose something else, set model.run_start and call model.set_restart_file()
-
+        if args.resume!='last':
+            # to choose something else, set model.run_start and call model.set_restart_file()
+            # is it enough to call model.update_config()? yes
+            # but who is calling update_config? HydroModel.write() calls it.
+            model.run_start=np.datetime64(args.resume)
+            
         model.run_stop = kwargs['run_stop']
         model.extraresistance=kwargs['extraresistance']
     else:
@@ -501,7 +527,7 @@ def driver_main(args):
 
     # be careful with restarts
     if model.restart:
-        script_dir=os.path.join(model.run_dir,'scripts_'+suffix)
+        script_dir=os.path.join(model.run_dir,'scripts'+suffix)
         if not os.path.exists(script_dir):
             os.makedirs(script_dir)
     else:
@@ -658,7 +684,6 @@ def task_main(args):
                     rec['fp'].write(f"{tstart_min+t_pad:.4f} {' '.join(last_pieces[1:])}\n")
                     
                 rec['fp'].flush()
-                
 
     # dfm will figure out the per-rank file
     # initialize changes working directory to where mdu is.
@@ -668,16 +693,17 @@ def task_main(args):
     logging.info(f"[{rank}] initialized")
 
     if rank==0:
+        run_name=mdu.name
         if args.mpi is None:
-            hist_fn="DFM_OUTPUT_flowfm/flowfm_his.nc"
+            hist_fn=f"DFM_OUTPUT_{mdu.name}/{mdu.name}_his.nc"
         else:
-            hist_fn="DFM_OUTPUT_flowfm/flowfm_0000_his.nc"
+            hist_fn=f"DFM_OUTPUT_{mdu.name}/{mdu.name}_0000_his.nc"
         # hoping I can figure out where to pull stage here, instead of
         # in the time loop
         for waiting in range(10):
             if os.path.exists(hist_fn):
                 break
-            logging.info("Will sleep to wait for hist_fn")
+            logging.info(f"Will sleep to wait for hist_fn {hist_fn}")
             sys.stdout.flush()
             time.sleep(2.0)
         else:
