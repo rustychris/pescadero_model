@@ -369,15 +369,23 @@ def driver_main(args):
     if args.run_dir is not None:
         run_dir=args.run_dir
 
-    suffix=0
-    for suffix in range(100):
+    # Choose a unique run dir by scanning through, select the next suffix
+    # beyond the largest one already there
+    last_suffix_found=-1
+    def fn_suffixed(suffix): 
         if suffix==0:
             test_dir=run_dir
         else:
             test_dir=run_dir+f"-v{suffix:03d}"
-        if not os.path.exists(test_dir):
-            kwargs['run_dir']=test_dir
-            break
+        return test_dir
+    max_runs=100
+    for suffix in range(max_runs):
+        test_dir=fn_suffixed(suffix)
+        if os.path.exists(test_dir):
+            last_suffix_found=suffix
+    if last_suffix_found < max_runs-1:
+        suffix=last_suffix_found+1
+        kwargs['run_dir']=fn_suffixed(suffix)
     else:
         raise Exception("Failed to find unique run dir (%s)"%test_dir)
 
@@ -521,7 +529,14 @@ def driver_main(args):
 
     model.mdu['output','MbaInterval'] = 43200
     model.mdu['output','MbaWriteCSV'] = 1
-    # model.mdu['time','Timestepanalysis'] = 1 # temporary
+
+    # more help for debugging time step issues
+    model.mdu['output','Wrimap_volume1']    = 1                    
+    model.mdu['output','Wrimap_flow_analysis']= 1                    
+    model.mdu['time','Timestepanalysis'] = 1 # temporary
+
+    # Temporary change...
+    # model.mdu['output','MapInterval']=3600
 
     model.write()
 
