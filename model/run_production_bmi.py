@@ -17,14 +17,10 @@ srun --partition high2 --mpi=pmi2 --mem-per-cpu 4G -n 32 -N 1 --time 1:00:00 pyt
 Seems that loading libdflowfm.so conflicts with some aspect of netCDF4 and ogr/osr.
 Refactor such that BMI invocation imports very little.
 """
-import sys
-import os
+import sys, os, glob, time, logging, subprocess, shutil
 import numpy as np
 from stompy import utils
 import xarray as xr
-import subprocess, shutil
-import time
-import logging
 import local_config
 
 os.environ['NUMEXPR_MAX_THREADS']='1'
@@ -32,7 +28,7 @@ os.environ['NUMEXPR_MAX_THREADS']='1'
 class PescaBmiSeepageMixin(object):
     extraresistance=8.0
 
-    evap=False
+    evap=True
 
     def set_atmospheric_bcs(self):
         if self.evap:
@@ -52,8 +48,13 @@ class PescaBmiSeepageMixin(object):
         self.mdu['output','Wrihis_temperature']=0
 
         # DBG: maybe having a non-default value here is problematic?
-        self.log.warning("Leave Epshu to default value")
-        del self.mdu['numerics','Epshu'] # 5mm wet/dry threshold
+        #self.log.warning("Leave Epshu to default value")
+        #del self.mdu['numerics','Epshu'] # 5mm wet/dry threshold
+
+        # temporary: test larger diffusivity
+        # did not look better, though the bed layer showed a bit more range.
+        # self.mdu['physics','Dicoww']=1e-7
+        # Waiting to see results to decide if this is good or bad.
 
     def add_mouth_structure(self):
         """
@@ -237,6 +238,24 @@ class PescaBmiSeepageMixin(object):
 #                               temperature=False,
 #                               extraresistance=1)
 
+def get_restart_time(mdu):
+    restart_file=mdu['restart','RestartFile']
+    # for map file, can just query the mdu RestartTime
+    assert '_map' not in restart_file,"No support for getting restart time from map file"
+    year=restart_file[-22:-18]
+    month=restart_file[-18:-16]
+    day=restart_file[-16:-14]
+    hour=restart_file[-13:-11]
+    minute=restart_file[-11:-9]
+    second=restart_file[-9:-7]
+    return np.datetime64(f'{year}-{month}-{day} {hour}:{minute}:{second}')
+def get_reference_time(mdu):
+    ref_time=mdu['time','RefDate']
+    year=ref_time[0:4]
+    month=ref_time[4:6]
+    day=ref_time[6:8]
+    return np.datetime64(f'{year}-{month}-{day}')
+
 def main(argv=None):
     import argparse
 
@@ -260,6 +279,8 @@ def main(argv=None):
 
     parser.add_argument('-t','--three-d',help='Run in 3D',
                         action='store_true')
+
+    parser.add_argument('--terrain',default='asbuilt',help='Select base terrain DEM')
     
     parser.add_argument('-r','--run-dir',help='override default run_dir',
                         default=None,type=str)
@@ -268,10 +289,17 @@ def main(argv=None):
 
     # parser.add_argument('-c','--continue',help='continue from existing run')
 
+    parser.add_argument('--debug-salt',help="Set all salt values to 32",action='store_true')
+
+    parser.add_argument('--temperature',help="Enable temperature",action='store_true')
+
     parser.add_argument('--slr',help='Sea level rise offset in meters',default=0.0,type=float)
 
     # Get the MPI flavor to know how to identify rank and start the tasks
     parser.add_argument("-m", "--mpi", help="Enable MPI flavor",default=local_config.LocalConfig.mpi_flavor)
+
+    parser.add_argument("--resume",help="Resume a run from last restart time, or a YYYY-MM-DDTHH:MM:SS timestamp if given",
+                        const='last',default=None,nargs='?')
 
     args = parser.parse_args(argv)
 
@@ -282,22 +310,24 @@ def main(argv=None):
         driver_main(args)
 
 def driver_main(args):
-    import pesca_base # this is going to be problematic
+    import pesca_base 
     import nm_scenarios
     
     class PescaBmiSeepage(nm_scenarios.NMScenarioMixin,PescaBmiSeepageMixin,pesca_base.PescaButano):
         pass
 
-    kwargs=dict(terrain='asbuilt',
+    kwargs=dict(terrain=args.terrain,
                 z_max=3.0,z_min=-0.5,
                 extraresistance=8,
                 scenario=args.scenario,
                 num_procs=args.num_cores,
                 nlayers_3d=args.layers,
+                debug_salt=args.debug_salt,
                 flow_regime=args.flow_regime)
         
     run_dir="data"
 
+    # even for resume, use the same logic here, then come back to make changes
     if args.period=='2016':
         kwargs['run_start']=np.datetime64("2016-07-15 00:00")
         kwargs['run_stop']=np.datetime64("2016-12-16 00:00")
@@ -310,16 +340,20 @@ def driver_main(args):
         kwargs['run_start']=np.datetime64("2013-03-22 12:00")
         kwargs['run_stop']=np.datetime64("2014-03-08 00:00")
         run_dir += "_2013"
+    elif "," in args.period:
+        arg_start,arg_stop=args.period.split(',')
+        kwargs['run_start']=np.datetime64(arg_start)
+        kwargs['run_stop']=np.datetime64(arg_stop)
     else:
         raise Exception("Unknown period '%s'"%args.period)
     
     if args.three_d:
         kwargs['salinity']=True
-        kwargs['temperature']=True
+        kwargs['temperature']=args.temperature # try to save some time
         run_dir+="_3d"
     else:
         kwargs['salinity']=False
-        kwargs['temperature']=False
+        kwargs['temperature']=args.temperature
         run_dir+="_2d"
 
     run_dir+=f"_{kwargs['terrain']}"
@@ -335,19 +369,74 @@ def driver_main(args):
     if args.run_dir is not None:
         run_dir=args.run_dir
 
-    suffix=0
-    for suffix in range(100):
+    # Choose a unique run dir by scanning through, select the next suffix
+    # beyond the largest one already there
+    last_suffix_found=-1
+    def fn_suffixed(suffix): 
         if suffix==0:
             test_dir=run_dir
         else:
             test_dir=run_dir+f"-v{suffix:03d}"
-        if not os.path.exists(test_dir):
-            kwargs['run_dir']=test_dir
-            break
+        return test_dir
+    max_runs=100
+    for suffix in range(max_runs):
+        test_dir=fn_suffixed(suffix)
+        if os.path.exists(test_dir):
+            last_suffix_found=suffix
+    if last_suffix_found < max_runs-1:
+        suffix=last_suffix_found+1
+        kwargs['run_dir']=fn_suffixed(suffix)
     else:
         raise Exception("Failed to find unique run dir (%s)"%test_dir)
-    
-    model=PescaBmiSeepage(**kwargs)
+
+    if args.resume is not None:
+        old_model=PescaBmiSeepage.load(args.mdu)
+        deep=True
+
+        if not deep:
+            # Choose suffix:
+            for suffidx in range(10):
+                suffix=f"_r{suffidx:02d}"
+                if not os.path.exists(args.mdu.replace('.mdu',suffix+".mdu")):
+                    break
+            else:
+                # no real limit, but probably a sign of a bug.
+                raise Exception("Too many restarts - ran out of suffixes")
+            model=old_model.create_restart(deep=deep,mdu_suffix=suffix)
+        else:
+            # debug runs were using deep=False, but here we're invoking all the
+            # machinery, seems like a deep restart would be appropriate.
+            # in that case, need a new run_dir:
+            # HERE -- construct a run_dir and figure out how to pass it in, and make
+            # sure model class is correct.
+            parent_dir=os.path.dirname(args.mdu)
+            for suffidx in range(10):
+                suffix=f"_r{suffidx:02d}"
+                run_dir=parent_dir+suffix
+                if not os.path.exists(run_dir):
+                    break
+            else:
+                # no real limit, but probably a sign of a bug.
+                raise Exception("Too many restarts - ran out of suffixes")
+            model=old_model.create_restart(deep=deep)
+            model.set_run_dir(run_dir,mode='noclobber')
+
+        # selectively pull in kwargs
+        # ignore terrain z_max z_min scenario num_procs, nlayers_3d, flow_regime
+        #    run_start salinity temperature slr
+        # extraresistance: could include.
+        #  include run_stop
+        # For now, run_start defaults to last restart file.
+        if args.resume!='last':
+            # to choose something else, set model.run_start and call model.set_restart_file()
+            # is it enough to call model.update_config()? yes
+            # but who is calling update_config? HydroModel.write() calls it.
+            model.run_start=np.datetime64(args.resume)
+            
+        model.run_stop = kwargs['run_stop']
+        model.extraresistance=kwargs['extraresistance']
+    else:
+        model=PescaBmiSeepage(**kwargs)
     
     # First go at 2013, very long, will start in 2D. Wind was probably not working for this.
     # model=PescaBmiSeepage(run_start=np.datetime64("2013-03-22 12:00"),
@@ -419,21 +508,61 @@ def driver_main(args):
     #                       nlayers_3d=1, # 2D-ish
     #                       z_max=3.0,z_min=-0.5,
     #                       extraresistance=8)
-    
-    model.mdu['geometry','ChangeVelocityAtStructures']=1
+
+    # still chasing things down...
+    # model.mdu['geometry','ChangeVelocityAtStructures']=1
     model.mdu['time','AutoTimestepNoStruct']=1
 
     # 2022-04-06: any chance this helps?
     #  I think it helped a small amount, but may also have introduced
     #  salinity issues? New runs without this are painful, though with
     #  farm performance being unpredictable it's hard to sort out.
-    model.mdu['numerics','Drop3D']=0.5
+    # 2022-05-05: testing with short runs, nonzero value here was actually
+    #  slower, and salinity no better. But in the early parts of the run
+    #  it appears essential to include this, otherwise the first part of the
+    #  the run is extremely slow.
+    model.mdu['numerics','Drop3D']=-999
+    # Try dropping this -- maybe that's what is causing these runs to be so slow.
+    # model.mdu['numerics','Keepzlayeringatbed']=0
+    # Praying that 0.5 is magic threshold.
+    model.mdu['numerics','CFLMax'] = 0.40
+
+    model.mdu['output','MbaInterval'] = 43200
+    model.mdu['output','MbaWriteCSV'] = 1
+
+    # more help for debugging time step issues
+    model.mdu['output','Wrimap_volume1']    = 1                    
+    model.mdu['output','Wrimap_flow_analysis']= 1                    
+    model.mdu['time','Timestepanalysis'] = 1 # temporary
+
+    # Temporary change...
+    # model.mdu['output','MapInterval']=3600
 
     model.write()
 
-    shutil.copyfile(__file__,os.path.join(model.run_dir,os.path.basename(__file__)))
-    shutil.copyfile("pesca_base.py",os.path.join(model.run_dir,"pesca_base.py"))
-    shutil.copyfile("local_config.py",os.path.join(model.run_dir,"local_config.py"))
+    # be careful with restarts
+    if model.restart:
+        script_dir=os.path.join(model.run_dir,'scripts'+suffix)
+        if not os.path.exists(script_dir):
+            os.makedirs(script_dir)
+    else:
+        script_dir=model.run_dir
+        
+    shutil.copyfile(__file__,os.path.join(script_dir,os.path.basename(__file__)))
+    shutil.copyfile("pesca_base.py",os.path.join(script_dir,"pesca_base.py"))
+    shutil.copyfile("local_config.py",os.path.join(script_dir,"local_config.py"))
+    with open(os.path.join(script_dir,"cmdlne"),'wt') as fp:
+        fp.write(str(args))
+        fp.write("\n")
+        fp.write(" ".join(sys.argv))
+
+    # Recent DFM has problems reading cached data -- leads to freeze.
+    # assuming this is safe even for restarts
+    for f in glob.glob(os.path.join(model.run_dir,'*.cache')):
+        os.unlink(f)
+    if 'SLURM_JOB_ID' in os.environ:
+        with open(os.path.join(script_dir,'job_id'),'wt') as fp:
+            fp.write(f"{os.environ['SLURM_JOB_ID']}\n")
 
     model.partition()
 
@@ -462,6 +591,8 @@ def task_main(args):
     logging.basicConfig(filename=log_fn, level=logging.DEBUG)
     logging.debug("Top of task_main")
     logging.debug('This message should go to the log file')
+
+    logging.debug(f"PID {os.getpid()}  rank {rank}")
     
     import local_config
     import bmi.wrapper
@@ -506,9 +637,13 @@ def task_main(args):
     # runs don't always start at the reference time
     tstart_min=float(mdu['time','tstart'])/60
 
-    dt_min=mdu['numerics','MinTimestepBreak']
-    if dt_min:
-        dt_min=float(dt_min)
+    # RH: cruft
+    # dt_min=mdu['numerics','MinTimestepBreak']
+    # if dt_min:
+    #     dt_min=float(dt_min)
+
+    # is this a restart?
+    is_restart = (mdu['restart','RestartFile'] not in [None,""])
     
     if rank==0:
         seepages=[ dict(name=s) for s in model.seepages]
@@ -516,27 +651,74 @@ def task_main(args):
         for rec in seepages:
             t_pad=dt/60. # In minutes
             tim_fn=os.path.join(model.run_dir,f'{rec["name"]}.tim')
-            rec['fp']=open(tim_fn,'wt')
-            for t in [0.0,t_pad]: # HERE: may have to adjust for reference time
-                rec['fp'].write(f"{t+tstart_min:.4f} 0.05{salt_temp}\n")
-            rec['fp'].flush()
+            if not is_restart or not os.path.exists(tim_fn):
+                rec['fp']=open(tim_fn,'wt')
+                for t in [0.0,t_pad]: 
+                    # This had been writing 0.05 -- probably a relic from testing
+                    rec['fp'].write(f"{t+tstart_min:.4f} 0.00{salt_temp}\n")
+                rec['fp'].flush()
+            else:
+                logging.info("Truncating seepage flow for restart")
+                # as np.datetime64
+                t_restart = get_restart_time(mdu)
+                t_reference = get_reference_time(mdu)
+                
+                # Probably the best thing to do is move the original tim to a
+                # backup, read it in, truncate to restart time + pad, make sure
+                # it has an entry for t+pad, then continue.
+                # This does get messy if we go back and want to restart multiple times.
+                # But as long as we're doing shallow restarts, then there will be one
+                # copy of FlowFM.ext, and better not to muck with it too much.
+                tim_fn_bak=tim_fn+"-prerestart"
+                os.rename(tim_fn,tim_fn_bak)
+                logging.info(f"Original seepage moved to {tim_fn_bak}")
+
+                # unfortunately we can't just use stompy.model.delft.io to read the
+                # tim because it has dependencies that are not compatible with libdflowfm.so
+                rec['fp']=open(tim_fn,'wt')
+
+                # truncate to no later than this time:
+                tstart_min=(t_restart-t_reference)/np.timedelta64(60,'s')
+                logging.info(f"Truncate to {tstart_min} minutes (and some pad)")
+
+                last_t_min=None
+                with open(tim_fn_bak,'rt') as fp_in:
+                    line_in=fp_in.readline()
+                    pieces=line_in.split()
+                    t_minutes=float(pieces[0])
+                    if t_minutes<=tstart_min+t_pad:
+                        rec['fp'].write(line_in)
+                        last_t_min=t_minutes
+                        last_pieces=pieces
+                    else:
+                        break
+
+                # just to be sure:
+                if last_t_min<tstart_min+t_pad:
+                    logging.info(f"Had to top off the seepage tim file")
+                    rec['fp'].write(f"{tstart_min+t_pad:.4f} {' '.join(last_pieces[1:])}\n")
+                    
+                rec['fp'].flush()
 
     # dfm will figure out the per-rank file
     # initialize changes working directory to where mdu is.
     logging.info(f"[{rank}] about to initialize")
     sim.initialize(args.mdu)
+    
+    logging.info(f"[{rank}] initialized")
 
     if rank==0:
+        run_name=mdu.name
         if args.mpi is None:
-            hist_fn="DFM_OUTPUT_flowfm/flowfm_his.nc"
+            hist_fn=f"DFM_OUTPUT_{mdu.name}/{mdu.name}_his.nc"
         else:
-            hist_fn="DFM_OUTPUT_flowfm/flowfm_0000_his.nc"
+            hist_fn=f"DFM_OUTPUT_{mdu.name}/{mdu.name}_0000_his.nc"
         # hoping I can figure out where to pull stage here, instead of
         # in the time loop
         for waiting in range(10):
             if os.path.exists(hist_fn):
                 break
-            logging("Will sleep to wait for hist_fn")
+            logging.info(f"Will sleep to wait for hist_fn {hist_fn}")
             sys.stdout.flush()
             time.sleep(2.0)
         else:
@@ -604,7 +786,7 @@ def task_main(args):
                     Q=0.0
 
                 t_new=(dt+t_now) / 60.0
-                rec['fp'].write(f"{t_new+t_pad:.4f} {Q:.4f} {salt_temp}\n")
+                rec['fp'].write(f"{t_new+t_pad:.4f} {Q:.6f} {salt_temp}\n")
                 rec['fp'].flush()
 
         t_bmi+=time.time() - t_last

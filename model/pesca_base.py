@@ -41,13 +41,16 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
     slr_raise_inlet=True # adjust the nearshore and part of inlet up by SLR, too
     
     salinity=True
-    temperature=True
+    temperature=False
     # if salinity or temperature are included, then use this
     # many layers, otherwise just 1 layer
     z_min=-0.25 # Based on low point in lagoon
     z_max=3.25  # Based on highest water level in lagoon
     nlayers_3d=14 # 0.25m layers for z_min/max above
     deep_bed_layer=True # make the deepest interface at least as deep as the deepest node
+
+    # If true, IC and all BCs are set to 32.0
+    debug_salt=False
     
     def configure(self):
         super(PescaButanoBaseMixin,self).configure()
@@ -103,7 +106,7 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
             self.mdu['physics','Idensform']=2 # UNESCO
             self.mdu['numerics','TurbulenceModel']=3 # 0: breaks, 1: constant,  3: k-eps
             self.mdu['physics','Dicoww']=1e-8
-            self.mdu['physics','Vicoww']=1e-7
+            self.mdu['physics','Vicoww']=1e-6 # used to be 1e-7, but isn't 1e-6 more appropriate?
         else:
             self.mdu['physics','Idensform']=0 # no density effects
 
@@ -619,8 +622,12 @@ class PescaButanoMixin(PescaButanoBaseMixin):
         assert ocean_bc,"mouth waterlevel BC method probably should return a BC"
         
         if self.salinity:
-            # ballpark value pulled from BML time series
-            ocean_salt=hm.ScalarBC(parent=ocean_bc,scalar='salinity',value=33.0)
+            if self.debug_salt:
+                salt_bc=32
+            else:
+                # ballpark value pulled from BML time series
+                salt_bc=33.0
+            ocean_salt=hm.ScalarBC(parent=ocean_bc,scalar='salinity',value=salt_bc)
             self.add_bcs([ocean_salt])
         if self.temperature:
             # ballpark value pulled from BML time series during open mouth,
@@ -737,7 +744,11 @@ class PescaButanoMixin(PescaButanoBaseMixin):
         # Seems that salinity defaults to the IC salinity.
         if self.salinity:
             for ck in [bc_butano,bc_pesca]:
-                ck_salt=hm.ScalarBC(parent=ck,scalar='salinity',value=0)
+                if self.debug_salt:
+                    salt=32.0
+                else:
+                    salt=0.0
+                ck_salt=hm.ScalarBC(parent=ck,scalar='salinity',value=salt)
                 self.add_bcs([ck_salt])
             
         if self.temperature:
