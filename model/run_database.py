@@ -16,79 +16,59 @@ recs.append(dict(
     flows='impaired'
 ))
 
-# v020 got to 60%, but it's unclear what stopped it. salt balance is okay 0.0012% a few times.
-# could not determine cause of death.
-# - cause of death for v020?
-#    jobid 49591184 (with siblings)
-#    no hints in log-*, *.dia, slrum.out only talks about v022
-#    unclear.
 # v022 has clean salt, at least up to 50% complete. killed, b/c v020 was further along.
-
-# resumed v020 with batch_data_2016long_3d_asbuilt_impaired-v020_r00.sh
-# job 51028340
-
-# that got wedged, quickly jumping up to an 80 day run time.
-# resumed from the same spot, but back to local DFM, and it's looking much
-# better. killed r00
+# resumed v020 with batch_data_2016long_3d_asbuilt_impaired-v020_r00.sh, but stock dfm wedged.
+# resumed from the same spot, with local DFM
 
 # NEXT: 
 #   Check on r01
-#   - check salt balance. 6/21 - good
+#   - check salt balance. 6/24 - okay. a few blips around 0.01%, mostly much lower.
 #   - currently on track to finish 7/1
-# 
-
 
 # ---------------------------
 
 recs.append(dict(
-    run_dir='data_2016long_3d_asbuilt_impaired_scen1-v002',
+    run_dir='data_2016long_3d_asbuilt_impaired_scen1-v002_r00',
     scen=1,
     layers=100,
     status='running', 
-    # 6/17: anticipate 6/28 finish
+    # 6/24: anticipate 7/12 finish roughly 
     flows='impaired'
 ))
-# squeue shows it still running?
-#   looks like the job_id is fucked here, too.
-#   the -v002 run has the same job_id, and maybe is the one still running.
-# v001 died at 49.6%. Mass balance okay so far.
-# v002? also 100 layers. at 48%. running, and mass balance okay.
-# let v002 continue, keep v001 as a backup. 
+# v001 died at 49.6%. Mass balance okay so far. keep as backup
+# let v002 continue as the main run
+# was bogging down during the breaches and hit time limit
+# 6/21 resumed 51113704.
+# 6/22: very slow - predicting 21d 10h run for 112 days.
+#   this is around 2016-11-09 -- shouldn't be that slow...
+#   a lot of substepping, scalar is at dt=0.01s
+# 6/24: still pretty slow -- looks like almost 20d remaining for 98d
+#   global dt 1.7s, okay. limitation on proc 9, 15. proc 9: getting stuck in a layer
+#   with volume 0.0864. flows don't look crazy, I think it's just a really shallow layer.
 
-# on 6/17, anticipated a 6/28 finish.
-# now on 6/19, looking like a 7/1 finish, and it's running slower than realtime.
-# it's at 122d in, dt=0.15, 2016-10-31: this is the partial breach.
-# 6/21/22: at 12/01, nearing the big breach, 
-
-# 6/21 - hit time limit.  resumed 51113704
 
 # NEXT: 
-#  - check on resumed run
+#  - check for progress
 
 # -----------------------------------
 
-
 recs.append(dict(
-    run_dir='data_2016long_3d_asbuilt_impaired_scen2-v004_r00',
+    run_dir='data_2016long_3d_asbuilt_impaired_scen2-v004_r01',
     scen=2,
     layers=100,
     status='running',
-    # on 5am PDT, 6/17:
-    #   10d 10:48 remaining, anticipate a 6/27 finish
-    # 1pm PDT, 6/19:
-    #    9d 22:46 remaining. 6/28 finish.
-    # 4am PDT, 6/21:
-    #    9d 23:48 remaining.
     flows='impaired'
 ))
 # v004 is also 100 layers, it's running, it's at 50.3%
-#   salt balance okay
-# 6/21: resumed to r00, job id 51108911
+#   salt balance okay. I think it died in the mysterious way that others have died (editing driving script)
+#   and then a bug in restarts led to restarts being bad.
+# r00 resume suffered from restart bug.  -- archived
+# r01 started 6/23.
+# a new r00 started with old DFM compile
 
 
 # NEXT:
-#  - check progress of v004_r00. Is it any faster/less wedged than
-#    the parent run?
+#  - check progress of v004_r01 and r00. If r00 is faster, kill r01 and archive
 
 # ----------------------------
 
@@ -98,30 +78,42 @@ recs.append(dict(
 # will kill this, in order to see if the restart of v003 is telling
 # at all. then consider a restart using the standard compile
 recs.append(dict(
-    # presumably switching to r01 run. r00 got wedged.
-    run_dir='data_2016long_3d_asbuilt_impaired_scen3-v004_r01',
+    run_dir='data_2016long_3d_asbuilt_impaired_scen3-v004_r00',
     scen=3,
     layers=100,
     status='dead',
     flows='impaired'
 ))
+
+# r00, r01, r02: these are basically useless, as they had the wrong fixed weirs, and have been
+# archived.
+
+
+
+# v006: projecting 24 days total
+# v007: projecting 71 days. wtf? this should be similar to previous runs, just with more output?
+#       it should be using the new compile. possible it's on a bad node.
+#       node seems okay. but most(?) of the processes for this run are using a fraction of available
+#       CPU. Makes me wonder if one node is substepping a huge amount. only oddity in the output
+#       is proc 4 has 40 "nonglobal" -- a lot more than anyone else. also proc 7 gets some negative
+#       salinity. unclear what's going on.  for now, let it ride.
+
 # ends with some moderate salt issues.
 # restart before 12/10.  the 1208 restart is fine
-# restarting, job id 51028409
-# this went to 80days expected run time.
-# switch back to local dfm and resume again (from original) => r01
-# it went for 3 days, then stuck again. granted, this is the big breach.
-# but it's going to take forever.
 
-# added more debugging, started an r02 in parallel with r01.
+# added more debugging, tried and failed to resume with new compile (r02)
 # also started a fresh run, 51109133, -v006, with the other option for 
 # keepzlayeringatbed.
+# and a fresh start v007, with the new debugging output.
+#
 
+# found bug in restarts for scenario 2, scenario 3, and all SLR runs.
+# r03 is now running, should be better. but it's a slow compile for some reason.
+# a new r00 is now running, and looking a lot faster.
 
 # NEXT:
-#  - check on progress, balance of restart
+#  - check on progress, balance of r03, and r00
 #  - check on progress of the fresh run.
-#  - consider intensive debugging
 
 # -------------------------------
 

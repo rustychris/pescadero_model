@@ -9,17 +9,15 @@
 
 conda activate general
 
+# back to local dfm. stock dfm quickly reported an 80d run time.
 . /share/apps/intel-2019/bin/compilervars.sh intel64
-
 PREFIX=/home/rustyh/src/dfm/t140737
+# OLD !! Testing whether I have a bad compile...
 export DFM_ROOT=$PREFIX/build/dfm/src/build_dflowfm-old/install
 export PATH=$PREFIX/bin:$PATH
 export LD_LIBRARY_PATH=$PREFIX/lib:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=$DFM_ROOT/lib:$LD_LIBRARY_PATH
 
-
 uptime
 
-python run_production_bmi.py --mdu data_2016long_3d_asbuilt_impaired_scen2-v004/flowfm.mdu --resume -p 2016long -s scen2
-
-
+python run_production_bmi.py --mdu data_2016long_3d_asbuilt_impaired_scen3-v004/flowfm.mdu --resume -p 2016long -s scen3 -f impaired

@@ -138,12 +138,17 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
         else:
             self.log.warning("QCM doesn't cover initial condition, fall back to BC")
             return super(PescaButanoBaseMixin,self).infer_initial_water_level()
-            
+
+    # relative to model directory. Grid with no bathymetry
+    grid_file="../grids/pesca_butano_v05/quad_tri_v21-edit30.nc"
     def set_grid_and_features(self):
         # For now the only difference is the DEM. If they diverge, might go
         # with separate grid directories instead (maybe with some common features)
-        self.grid_dir=grid_dir=os.path.join(local_config.model_dir,"../grids/pesca_butano_v04")
+        self.grid_full_path=os.path.join(local_config.model_dir,self.grid_file)
+        self.grid_dir=grid_dir=os.path.dirname(self.grid_full_path)
+        # HERE - 
         self.set_grid(os.path.join(grid_dir, f"pesca_butano_{self.terrain}_deep_bathy.nc"))
+        
         self.add_gazetteer(os.path.join(grid_dir,"line_features.shp"))
         self.add_gazetteer(os.path.join(grid_dir,"point_features.shp"))
         self.add_gazetteer(os.path.join(grid_dir,"polygon_features.shp"))

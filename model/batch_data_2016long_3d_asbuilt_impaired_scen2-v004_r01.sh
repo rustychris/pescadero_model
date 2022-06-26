@@ -12,7 +12,7 @@ conda activate general
 . /share/apps/intel-2019/bin/compilervars.sh intel64
 
 PREFIX=/home/rustyh/src/dfm/t140737
-export DFM_ROOT=$PREFIX/build/dfm/src/build_dflowfm-old/install
+export DFM_ROOT=$PREFIX/build/dfm/src/build_dflowfm/install
 export PATH=$PREFIX/bin:$PATH
 export LD_LIBRARY_PATH=$PREFIX/lib:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=$DFM_ROOT/lib:$LD_LIBRARY_PATH

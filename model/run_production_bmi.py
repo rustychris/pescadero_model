@@ -402,13 +402,11 @@ def driver_main(args):
             else:
                 # no real limit, but probably a sign of a bug.
                 raise Exception("Too many restarts - ran out of suffixes")
-            model=old_model.create_restart(deep=deep,mdu_suffix=suffix)
+            model=old_model.create_restart(deep=deep,mdu_suffix=suffix,**kwargs)
         else:
             # debug runs were using deep=False, but here we're invoking all the
             # machinery, seems like a deep restart would be appropriate.
             # in that case, need a new run_dir:
-            # HERE -- construct a run_dir and figure out how to pass it in, and make
-            # sure model class is correct.
             parent_dir=os.path.dirname(args.mdu)
             for suffidx in range(10):
                 suffix=f"_r{suffidx:02d}"
@@ -418,7 +416,7 @@ def driver_main(args):
             else:
                 # no real limit, but probably a sign of a bug.
                 raise Exception("Too many restarts - ran out of suffixes")
-            model=old_model.create_restart(deep=deep)
+            model=old_model.create_restart(deep=deep,**kwargs)
             model.set_run_dir(run_dir,mode='noclobber')
 
         # selectively pull in kwargs
@@ -523,7 +521,9 @@ def driver_main(args):
     #  the run is extremely slow.
     model.mdu['numerics','Drop3D']=-999
     # Try dropping this -- maybe that's what is causing these runs to be so slow.
+    # 2022-06-21: will try reinstating? waiting to see how scen3-v006 goes.
     # model.mdu['numerics','Keepzlayeringatbed']=0
+    
     # Praying that 0.5 is magic threshold.
     model.mdu['numerics','CFLMax'] = 0.40
 
@@ -531,8 +531,8 @@ def driver_main(args):
     model.mdu['output','MbaWriteCSV'] = 1
 
     # more help for debugging time step issues
-    model.mdu['output','Wrimap_volume1']    = 1                    
-    model.mdu['output','Wrimap_flow_analysis']= 1                    
+    model.mdu['output','Wrimap_volume1']    = 1
+    model.mdu['output','Wrimap_flow_analysis']= 0 # enabling this might slow it down immensely.
     model.mdu['time','Timestepanalysis'] = 1 # temporary
 
     # Temporary change...
