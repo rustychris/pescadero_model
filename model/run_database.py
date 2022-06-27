@@ -97,6 +97,7 @@ recs.append(dict(
 #       CPU. Makes me wonder if one node is substepping a huge amount. only oddity in the output
 #       is proc 4 has 40 "nonglobal" -- a lot more than anyone else. also proc 7 gets some negative
 #       salinity. unclear what's going on.  for now, let it ride.
+#       Eventually killed it. 
 
 # ends with some moderate salt issues.
 # restart before 12/10.  the 1208 restart is fine
@@ -151,7 +152,7 @@ recs.append(dict(
 # ----------------------------
 
 recs.append(dict(
-    run_dir='data_2016long_3d_asbuilt_impaired_scen1'
+    run_dir='data_2016long_3d_asbuilt_impaired_scen1',
     scen=1,
     layers=30,
     status='complete',
@@ -162,7 +163,7 @@ recs.append(dict(
 # ----------------------------
 
 recs.append(dict(
-    run_dir='data_2016long_3d_asbuilt_impaired_scen2-v002'
+    run_dir='data_2016long_3d_asbuilt_impaired_scen2-v002',
     scen=2,
     layers=30,
     status='complete',
@@ -260,5 +261,82 @@ recs.append(dict(
 # ----------------------
 
 
+# NM Scenarios, 2D:
+recs.append(dict(
+    run_dir='data_2016_2d_asbuilt_impaired',
+    scen=0,
+    layers=1,
+    period='2016',
+    status='completed',
+    flows='impaired'
+))
+
+recs.append(dict(
+    run_dir='data_2016_2d_asbuilt_impaired_scen1-v001',
+    scen=1,
+    period='2016',
+    layers=1,
+    status='completed',
+    flows='impaired'
+))
+    
+recs.append(dict(
+    run_dir='data_2016_2d_asbuilt_impaired_scen2-v001',
+    scen=2,
+    layers=1,
+    period='2016',
+    status='completed',
+    flows='impaired'
+))
+
+recs.append(dict(
+    run_dir='data_2016_2d_asbuilt_impaired_scen3-v001',
+    scen=3,
+    layers=1,
+    period='2016',
+    status='completed',
+    flows='impaired'
+))
+
+# 2D, tidal runs
+recs.append(dict(
+    run_dir='data_2016_2d_asbuilt_impaired/flowfmrtidal.mdu',
+    scen=0,
+    layers=1,
+    period='2016tidal',
+    status='completed',
+    flows='impaired'
+))
 
 
+recs.append(dict(
+    run_dir='data_2016_2d_asbuilt_impaired_scen1/flowfmrtidal.mdu',
+    scen=1,
+    layers=1,
+    period='2016tidal',
+    status='completed',
+    flows='impaired'
+))
+
+recs.append(dict(
+    run_dir='data_2016_2d_asbuilt_impaired_scen2/flowfmrtidal.mdu',
+    scen=2,
+    layers=1,
+    period='2016tidal',
+    status='completed',
+    flows='impaired'
+))
+
+recs.append(dict(
+    run_dir='data_2016_2d_asbuilt_impaired_scen3/flowfmrtidal.mdu',
+    scen=3,
+    layers=1,
+    period='2016tidal',
+    status='completed',
+    flows='impaired'
+))
+
+
+
+#####################
+all_runs=pd.DataFrame(recs)
