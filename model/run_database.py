@@ -19,11 +19,14 @@ recs.append(dict(
 # v022 has clean salt, at least up to 50% complete. killed, b/c v020 was further along.
 # resumed v020 with batch_data_2016long_3d_asbuilt_impaired-v020_r00.sh, but stock dfm wedged.
 # resumed from the same spot, with local DFM
+# started a new run with new grid:
+#  data_2016long_3d_asbuilt_impaired_scen0_l100-v024
 
 # NEXT: 
 #   Check on r01
 #   - check salt balance. 6/24 - okay. a few blips around 0.01%, mostly much lower.
-#   - currently on track to finish 7/1
+#   - currently on track to finish 7/3 or so?
+#   Check on v024
 
 # ---------------------------
 
@@ -63,12 +66,16 @@ recs.append(dict(
 #   salt balance okay. I think it died in the mysterious way that others have died (editing driving script)
 #   and then a bug in restarts led to restarts being bad.
 # r00 resume suffered from restart bug.  -- archived
-# r01 started 6/23.
-# a new r00 started with old DFM compile
+# r01 started 6/23, but was slow. killed.
+# new r00 started with old DFM compile.  Got slow around 11/27/2016, projecting 40 days.
+#   Gambling on the new grid, killed r00.
 
+# Substantial grid edits, and started a new data_2016long_3d_asbuilt_impaired_scen2_l100-v005
+# At 24h, it's 18 days in, projecting a 13 day run total.
+# - salt balance? fine so far.
 
 # NEXT:
-#  - check progress of v004_r01 and r00. If r00 is faster, kill r01 and archive
+#  - check progress of v005
 
 # ----------------------------
 
@@ -88,8 +95,6 @@ recs.append(dict(
 # r00, r01, r02: these are basically useless, as they had the wrong fixed weirs, and have been
 # archived.
 
-
-
 # v006: projecting 24 days total
 # v007: projecting 71 days. wtf? this should be similar to previous runs, just with more output?
 #       it should be using the new compile. possible it's on a bad node.
@@ -106,11 +111,16 @@ recs.append(dict(
 # also started a fresh run, 51109133, -v006, with the other option for 
 # keepzlayeringatbed.
 # and a fresh start v007, with the new debugging output.
-#
 
 # found bug in restarts for scenario 2, scenario 3, and all SLR runs.
 # r03 is now running, should be better. but it's a slow compile for some reason.
 # a new r00 is now running, and looking a lot faster.
+
+# Substantial grid edits, and started a new data_2016long_3d_asbuilt_impaired_scen3_l100-v008
+# At 24h, it's 18 days in, projecting a 13 day run total.
+# Trying to decide if/when to switch horses.
+# - salt balance? fine (not surprising, it's early)
+
 
 # NEXT:
 #  - check on progress, balance of r03, and r00
