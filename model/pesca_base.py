@@ -1,7 +1,7 @@
 """
 Base subclass of DFlowModel for Pescadero-Butano domain
 """
-import os
+import os,sys
 import re
 import xarray as xr
 import numpy as np
@@ -15,9 +15,14 @@ import stompy.model.delft.io as dio
 import stompy.model.hydro_model as hm
 from stompy.io.local import cdip_mop
 from stompy import utils, filters
-from stompy.spatial import linestring_utils
+from stompy.spatial import (linestring_utils, wkb2shp, field)
 from shapely import geometry
+from stompy.grid import unstructured_grid
+import stompy.model.delft.io as dio
+
 import local_config
+
+
 
 cache_dir=os.path.join(local_config.model_dir,'cache')
 if not os.path.exists(cache_dir):
@@ -38,14 +43,22 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
     terrain='existing'
     # scenario=...
     slr=0.0 # [m] applied in prep_qcm_dataset to ocean, lagoon and thalweg elevations
+    slr_raise_inlet=True # adjust the nearshore and part of inlet up by SLR, too
+    
     salinity=True
-    temperature=True
+    temperature=False
     # if salinity or temperature are included, then use this
     # many layers, otherwise just 1 layer
     z_min=-0.25 # Based on low point in lagoon
     z_max=3.25  # Based on highest water level in lagoon
     nlayers_3d=14 # 0.25m layers for z_min/max above
     deep_bed_layer=True # make the deepest interface at least as deep as the deepest node
+
+    # If true, IC and all BCs are set to 32.0
+    debug_salt=False
+
+    # relative to model directory. Grid with no bathymetry
+    grid_file="../grids/pesca_butano_v05/quad_tri_v21-edit30.nc"
     
     def configure(self):
         super(PescaButanoBaseMixin,self).configure()
@@ -101,7 +114,7 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
             self.mdu['physics','Idensform']=2 # UNESCO
             self.mdu['numerics','TurbulenceModel']=3 # 0: breaks, 1: constant,  3: k-eps
             self.mdu['physics','Dicoww']=1e-8
-            self.mdu['physics','Vicoww']=1e-7
+            self.mdu['physics','Vicoww']=1e-6 # used to be 1e-7, but isn't 1e-6 more appropriate?
         else:
             self.mdu['physics','Idensform']=0 # no density effects
 
@@ -133,20 +146,129 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
         else:
             self.log.warning("QCM doesn't cover initial condition, fall back to BC")
             return super(PescaButanoBaseMixin,self).infer_initial_water_level()
-            
+
     def set_grid_and_features(self):
-        # For now the only difference is the DEM. If they diverge, might go
-        # with separate grid directories instead (maybe with some common features)
-        self.grid_dir=grid_dir=os.path.join(local_config.model_dir,"../grids/pesca_butano_v04")
-        self.set_grid(os.path.join(grid_dir, f"pesca_butano_{self.terrain}_deep_bathy.nc"))
-        self.add_gazetteer(os.path.join(grid_dir,"line_features.shp"))
-        self.add_gazetteer(os.path.join(grid_dir,"point_features.shp"))
-        self.add_gazetteer(os.path.join(grid_dir,"polygon_features.shp"))
+        # full path to original grid, no bathy.
+        self.grid_nobathy_path=os.path.join(local_config.model_dir,self.grid_file)
+        # directory holding that grid, and the directory with gazetteer features
+        self.grid_dir=os.path.dirname(self.grid_nobathy_path)
+
+        self.grid_with_bathy_path=os.path.join(self.grid_dir,
+                                               f"grid_{self.terrain}_deepbathy.nc")
+        # Do weirs depend on the grid? no.
+        self.fixed_weir_fn=os.path.join(self.grid_dir,f"fixed_weirs-{self.terrain}.pliz")
+
+        # will create grid_with_bathy_path and fixed_weir_fn as needed
+        self.add_bathy_to_grid_and_levees()
+        
+        self.set_grid(self.grid_with_bathy_path)
+        
+        self.add_gazetteer(os.path.join(self.grid_dir,"line_features.shp"))
+        self.add_gazetteer(os.path.join(self.grid_dir,"point_features.shp"))
+        self.add_gazetteer(os.path.join(self.grid_dir,"polygon_features.shp"))
 
         # Check for and install fixed_weirs
-        # Updated to now force this, to avoid hidden discrepancies
-        fixed_weir_fn=os.path.join(grid_dir,f"fixed_weirs-{self.terrain}.pliz")
-        self.fixed_weirs=dio.read_pli(fixed_weir_fn)
+        self.fixed_weirs=dio.read_pli(self.fixed_weir_fn)
+
+        if self.slr!=0.0 and self.slr_raise_inlet:
+            self.raise_inlet(self.slr)
+
+    def add_bathy_to_grid_and_levees(self):
+        bathy_dir=local_config.bathy_dir
+        bathy_asbuilt_fn=os.path.join(bathy_dir,'compiled-dem-asbuilt-20210920-1m.tif')
+        bathy_existing_fn=os.path.join(bathy_dir,'compiled-dem-existing-20210920-1m.tif')
+        
+        if self.terrain=='asbuilt':
+            dem_fn=bathy_asbuilt_fn
+        elif self.terrain=='existing':
+            dem_fn=bathy_existing_fn
+        else:
+            raise Exception(f"Unknown terrain: {self.terrain}")
+
+        assert os.path.exists(dem_fn),f"Failed to find {dem_fn}"
+
+        # Check for stale or missing:
+        gen_grid =utils.is_stale(self.grid_with_bathy_path,[dem_fn,self.grid_nobathy_path])
+        line_shp=os.path.join(self.grid_dir,'line_features.shp')
+        gen_weirs=utils.is_stale(self.fixed_weir_fn, [dem_fn,line_shp])
+
+        self.log.info("New grid with bathy needed? %s"%gen_grid)
+        self.log.info("New fixed weirs needed? %s"%gen_weirs)
+
+        if not (gen_grid or gen_weirs):
+            return
+        
+        self.log.info("Loading DEM for %s"%self.terrain)
+        dem=field.GdalGrid(dem_fn)
+
+        if gen_weirs:
+            lines=wkb2shp.shp2geom(line_shp)
+            self.log.info("Generating fixed weirs")
+            fixed_weir_fn="fixed_weirs-%s.pliz"%self.terrain
+            fixed_weirs=[] # suitable for write_pli
+            dx=5.0 # m. discretize lines at this resolution
+            for i in range(len(lines)):
+                feat=lines[i]
+                if feat['type']!='fixed_weir': continue
+
+                self.log.info(f"Processing levee feature {feat['name']}")
+                xy=np.array(feat['geom'])
+                xy=linestring_utils.upsample_linearring(xy,dx,closed_ring=False)
+                z=dem(xy)
+                fixed_weirs.append( (feat['name'],
+                                     np.c_[xy,z,0*z,0*z]))
+
+            dio.write_pli(self.fixed_weir_fn,fixed_weirs)
+
+        if gen_grid:
+            self.log.info("Setting bathymetry on grid")
+
+            g=unstructured_grid.UnstructuredGrid.read_ugrid(self.grid_nobathy_path)
+            g.renumber() # just to be sure
+
+            if 0: # Simplest option:
+                #   Put bathy on nodes, just direct sampling.
+                z_node=dem( g.nodes['x'] )
+            if 1: # Bias deep
+                # Maybe a good match with bedlevtype=5.
+                # BLT=5: edges get shallower node, cells get deepest edge.
+                # So extract edge depths (min,max,mean), and nodes get deepest
+                # edge.
+
+                alpha=np.linspace(0,1,5)
+                edge_data=np.zeros( (g.Nedges(),3), np.float64)
+
+                # Find min/max/mean depth of each edge:
+                for j in utils.progress(range(g.Nedges())):
+                    pnts=(alpha[:,None] * g.nodes['x'][g.edges['nodes'][j,0]] +
+                          (1-alpha[:,None]) * g.nodes['x'][g.edges['nodes'][j,1]])
+                    z=dem(pnts)
+                    edge_data[j,0]=z.min()
+                    edge_data[j,1]=z.max()
+                    edge_data[j,2]=z.mean()
+
+                z_node=np.zeros(g.Nnodes())
+                for n in utils.progress(range(g.Nnodes())):
+                    # This is the most extreme bias: nodes get the deepest
+                    # of the deepest points along adjacent edgse
+                    z_node[n]=edge_data[g.node_to_edges(n),0].min()
+
+            g.add_node_field('node_z_bed',z_node,on_exists='overwrite')
+            g.write_ugrid(self.grid_with_bathy_path,overwrite=True)
+        del dem
+
+
+    def raise_inlet(self,slr):
+        scen_shp=wkb2shp.shp2geom(os.path.join(local_config.bathy_dir,"dem-scenarios.shp"))
+        poly=scen_shp['geom'][ scen_shp['src_name']=='slr_region'][0]
+        inlet_nodes=self.grid.select_nodes_intersecting(poly)
+        max_dist=25.0
+        dists=self.grid.distance_transform_nodes(inlet_nodes,max_dist)
+        weights=(max_dist-dists).clip(0) / max_dist
+        assert np.all( np.isfinite(weights) )
+        assert weights.max()<=1.0
+        assert weights.min()>=0.0
+        self.grid.nodes['node_z_bed'][:] += weights*self.slr
 
     def friction_geometries(self):
         return self.match_gazetteer(geom_type='Polygon',type=type)
@@ -602,8 +724,12 @@ class PescaButanoMixin(PescaButanoBaseMixin):
         assert ocean_bc,"mouth waterlevel BC method probably should return a BC"
         
         if self.salinity:
-            # ballpark value pulled from BML time series
-            ocean_salt=hm.ScalarBC(parent=ocean_bc,scalar='salinity',value=33.0)
+            if self.debug_salt:
+                salt_bc=32
+            else:
+                # ballpark value pulled from BML time series
+                salt_bc=33.0
+            ocean_salt=hm.ScalarBC(parent=ocean_bc,scalar='salinity',value=salt_bc)
             self.add_bcs([ocean_salt])
         if self.temperature:
             # ballpark value pulled from BML time series during open mouth,
@@ -720,7 +846,11 @@ class PescaButanoMixin(PescaButanoBaseMixin):
         # Seems that salinity defaults to the IC salinity.
         if self.salinity:
             for ck in [bc_butano,bc_pesca]:
-                ck_salt=hm.ScalarBC(parent=ck,scalar='salinity',value=0)
+                if self.debug_salt:
+                    salt=32.0
+                else:
+                    salt=0.0
+                ck_salt=hm.ScalarBC(parent=ck,scalar='salinity',value=salt)
                 self.add_bcs([ck_salt])
             
         if self.temperature:

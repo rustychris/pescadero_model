@@ -44,12 +44,21 @@ class NMScenarioMixin(object):
                 # fixed_weirs[i] => (feature_label, N*M values, N labels)
                 xyz__=self.fixed_weirs[i][1]
                 assert xyz__.shape[1]==5 # should be x, y, and z and two heights that I ignore
+                z_original=xyz__[:,2].copy()
 
                 overlay=dem(xyz__[:,:2])
                 z=np.where(np.isnan(overlay),
                            xyz__[:,2],
                            overlay)
                 xyz__[:,2]=z
+                self.log.info(f"  {self.fixed_weirs[i][0]}: updated {np.isfinite(overlay).sum()} points")
+                if np.any(np.isfinite(overlay)):
+                    changed=(self.fixed_weirs[i][1][:,2] - z_original)[np.isfinite(overlay)]
+                    self.log.info(f"  {len(changed)} nodes, average change is {changed.mean()}")
+                else:
+                    self.log.info("   No finite updates to fixed weir elevation")
+                    
+            self.log.info("Done updating fixed weirs for scenario")
 
         if True: # gen_grids:
             g=self.grid
