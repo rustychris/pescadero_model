@@ -9,7 +9,7 @@ recs=[]
 
 # ----------------------
 recs.append(dict(
-    run_dir='data_2016long_3d_asbuilt_impaired-v020_r01',
+    run_dir='data_2016long_3d_asbuilt_impaired_scen0_l100-v026',
     scen=0,
     layers=100,
     status='resumed running',
@@ -21,17 +21,16 @@ recs.append(dict(
 # resumed from the same spot, with local DFM
 # started a new run with new grid:
 #  data_2016long_3d_asbuilt_impaired_scen0_l100-v024
+# two more grid updates, and we're at v026, which looks promising.
 
 # NEXT: 
-#   Check on r01
-#   - check salt balance. 6/24 - okay. a few blips around 0.01%, mostly much lower.
-#   - currently on track to finish 7/3 or so?
-#   Check on v024
+#   Check on r01 -- on track to finish 7/6.
+#   Check on v026 -- on track to finish 7/6
 
 # ---------------------------
 
 recs.append(dict(
-    run_dir='data_2016long_3d_asbuilt_impaired_scen1-v002_r00',
+    run_dir='data_2016long_3d_asbuilt_impaired_scen1-v003',
     scen=1,
     layers=100,
     status='running', 
@@ -48,10 +47,11 @@ recs.append(dict(
 # 6/24: still pretty slow -- looks like almost 20d remaining for 98d
 #   global dt 1.7s, okay. limitation on proc 9, 15. proc 9: getting stuck in a layer
 #   with volume 0.0864. flows don't look crazy, I think it's just a really shallow layer.
-
+# 6/30: stopped scen1-r00 to try run with new grid. accidentally nuked v002. v001
+#   remains as a backup.
 
 # NEXT: 
-#  - check for progress
+#  - check for progress on v003
 
 # -----------------------------------
 
@@ -114,7 +114,7 @@ recs.append(dict(
 
 # found bug in restarts for scenario 2, scenario 3, and all SLR runs.
 # r03 is now running, should be better. but it's a slow compile for some reason.
-# a new r00 is now running, and looking a lot faster.
+# a new r00 is now running, and looking a lot faster. This new r00 got wedged around Jan 7, 2017.
 
 # Substantial grid edits, and started a new data_2016long_3d_asbuilt_impaired_scen3_l100-v008
 # At 24h, it's 18 days in, projecting a 13 day run total.
