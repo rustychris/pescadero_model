@@ -59,7 +59,8 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
 
     # relative to model directory. Grid with no bathymetry
     #grid_file="../grids/pesca_butano_v05/quad_tri_v21-edit30.nc"
-    grid_file="../grids/pesca_butano_v06/quad_tri_v21-edit38.nc"
+    #grid_file="../grids/pesca_butano_v06/quad_tri_v21-edit38.nc"
+    grid_file="../grids/pesca_butano_v07/quad_tri_v21-edit41.nc"
     
     def configure(self):
         super(PescaButanoBaseMixin,self).configure()

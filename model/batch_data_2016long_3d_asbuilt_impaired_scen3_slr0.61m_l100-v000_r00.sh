@@ -3,7 +3,7 @@
 #SBATCH -o slurm_out-%j.output
 #SBATCH -e slurm_out-%j.output
 #SBATCH --partition high2
-#SBATCH -n 64
+#SBATCH -n 32
 #SBATCH -N 1
 #SBATCH --time 20-00:00:00
 
@@ -19,5 +19,5 @@ export LD_LIBRARY_PATH=$DFM_ROOT/lib:$LD_LIBRARY_PATH
 
 uptime
 
-python run_production_bmi.py --run-dir data_2016long_3d_asbuilt_impaired_scen3_slr0.61m_l100-v000 -s scen3 -n 32 --three-d --terrain asbuilt -l 100 -p 2016long -f impaired --slr 0.6096
+python run_production_bmi.py --mdu data_2016long_3d_asbuilt_impaired_scen3_slr0.61m_l100-v000/flowfm.mdu -s scen3 -n 32 --three-d --terrain asbuilt -l 100 -p 2016long -f impaired --slr 0.6096 --resume
 

@@ -3,7 +3,7 @@
 #SBATCH -o slurm_out-%j.output
 #SBATCH -e slurm_out-%j.output
 #SBATCH --partition high2
-#SBATCH -n 64
+#SBATCH -n 32
 #SBATCH -N 1
 #SBATCH --time 20-00:00:00
 
