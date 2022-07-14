@@ -188,14 +188,14 @@ class PescaBmiSeepageMixin(object):
         # get the edges along this line
         edges=self.grid.select_edges_by_polyline(weir_line,boundary=False)
         e2c=self.grid.edge_to_cells()
-        assert len(edges)==4
+        # assert len(edges)==4 -- no longer makes sense with coarsened grid
         nodes=[]
         for j in edges:
             for c in e2c[j,:]:
                 assert c>=0
                 nodes.append( self.grid.cell_to_nodes(c) )
         nodes=np.unique(np.concatenate(nodes))
-        assert len(nodes)==15
+        #assert len(nodes)==15
         node_z=self.grid.nodes['node_z_bed']
         # more than just dredging -- force the elevation
         node_z[nodes] = z_nom # np.minimum(node_z[nodes],z_nom)
