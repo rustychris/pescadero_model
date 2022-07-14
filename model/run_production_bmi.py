@@ -144,20 +144,28 @@ class PescaBmiSeepageMixin(object):
         # so make the top 1m have a 5cm gap.
         # Aside from accounting for some porosity, this appears to have made
         # the runs more stable. none of these runs had any issues (at least in 2D).
+        # 2022-07-07: SLR runs quite slow here.
+        # It's a substantial change, but will make the opening wider and dredge
+        # neighboring cells to baseline elevation.
+        # Also make the bottom of that notch match the upstream bed elevation
+        z_nom=1.45 # elevation of upstream bed and the base of the notch
+
+        name='butano_weir'
+        
         self.add_Structure(
             type='generalstructure',
-            name='butano_weir',
+            name=name,
             Upstream2Width=10,                 	# Width left side of structure (m)
             Upstream1Width=10,                 	# Width structure left side (m)
-            CrestWidth=8.0,   	# Width structure centre (m)
+            CrestWidth=15.0,   	# Width structure centre (m)
             Downstream1Width=10,                 	# Width structure right side (m)
             Downstream2Width=10,                 	# Width right side of structure (m)
             Upstream2Level=-0.5,                   	# Bed level left side of structure (m AD)
             Upstream1Level=-0.5,                   	# Bed level left side structure (m AD)
-            CrestLevel=1.0,	# Bed level at centre of structure (m AD)
+            CrestLevel=z_nom,	# Bed level at centre of structure (m AD)
             Downstream1Level=-0.5,                   	# Bed level right side structure (m AD)
             Downstream2Level=-0.5,                   	# Bed level right side of structure (m AD)
-            GateLowerEdgeLevel=1.0, # elevation of top of culvert
+            GateLowerEdgeLevel=z_nom, # elevation of top of culvert
             pos_freegateflowcoeff=1,                   	# Positive free gate flow (-)
             pos_drowngateflowcoeff=1,                   	# Positive drowned gate flow (-)
             pos_freeweirflowcoeff=1,                   	# Positive free weir flow (-)
@@ -169,10 +177,29 @@ class PescaBmiSeepageMixin(object):
             neg_drownweirflowcoeff=1,                   	# Negative drowned weir flow (-)
             neg_contrcoeffreegate=1,                   	# Negative flow contraction coefficient (-)
             extraresistance=1.0,                   	# Extra resistance (-)
-            GateHeight=1.0, # should be below crest, and ignored
+            GateHeight=2.0 - z_nom, 
             GateOpeningWidth=0.05, # gap to mimic porosity
         )
 
+        weir_line=self.get_geometry(name=name)
+        # These assertions are specific to this case -- not a general test of correctness of
+        # this code.
+        assert weir_line is not None
+        # get the edges along this line
+        edges=self.grid.select_edges_by_polyline(weir_line,boundary=False)
+        e2c=self.grid.edge_to_cells()
+        assert len(edges)==4
+        nodes=[]
+        for j in edges:
+            for c in e2c[j,:]:
+                assert c>=0
+                nodes.append( self.grid.cell_to_nodes(c) )
+        nodes=np.unique(np.concatenate(nodes))
+        assert len(nodes)==15
+        node_z=self.grid.nodes['node_z_bed']
+        # more than just dredging -- force the elevation
+        node_z[nodes] = z_nom # np.minimum(node_z[nodes],z_nom)
+        self.log.info("Modified bathy around butano weir")
         
     # BMI risky business
     seepages=['seepage']
