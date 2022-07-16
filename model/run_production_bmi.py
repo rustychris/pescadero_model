@@ -328,6 +328,9 @@ def main(argv=None):
     parser.add_argument("--resume",help="Resume a run from last restart time, or a YYYY-MM-DDTHH:MM:SS timestamp if given",
                         const='last',default=None,nargs='?')
 
+    parser.add_argument("--shallow",help="Set restart method to shallow (deep=False)",
+                        action='store_true')
+
     args = parser.parse_args(argv)
 
     if args.bmi:
@@ -418,7 +421,7 @@ def driver_main(args):
 
     if args.resume is not None:
         old_model=PescaBmiSeepage.load(args.mdu)
-        deep=True
+        deep=not args.shallow
 
         if not deep:
             # Choose suffix:
