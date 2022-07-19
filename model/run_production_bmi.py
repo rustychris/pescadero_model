@@ -188,14 +188,14 @@ class PescaBmiSeepageMixin(object):
         # get the edges along this line
         edges=self.grid.select_edges_by_polyline(weir_line,boundary=False)
         e2c=self.grid.edge_to_cells()
-        assert len(edges)==4
+        # assert len(edges)==4 -- no longer makes sense with coarsened grid
         nodes=[]
         for j in edges:
             for c in e2c[j,:]:
                 assert c>=0
                 nodes.append( self.grid.cell_to_nodes(c) )
         nodes=np.unique(np.concatenate(nodes))
-        assert len(nodes)==15
+        #assert len(nodes)==15
         node_z=self.grid.nodes['node_z_bed']
         # more than just dredging -- force the elevation
         node_z[nodes] = z_nom # np.minimum(node_z[nodes],z_nom)
@@ -328,6 +328,9 @@ def main(argv=None):
     parser.add_argument("--resume",help="Resume a run from last restart time, or a YYYY-MM-DDTHH:MM:SS timestamp if given",
                         const='last',default=None,nargs='?')
 
+    parser.add_argument("--shallow",help="Set restart method to shallow (deep=False)",
+                        action='store_true')
+
     args = parser.parse_args(argv)
 
     if args.bmi:
@@ -418,7 +421,7 @@ def driver_main(args):
 
     if args.resume is not None:
         old_model=PescaBmiSeepage.load(args.mdu)
-        deep=True
+        deep=not args.shallow
 
         if not deep:
             # Choose suffix:

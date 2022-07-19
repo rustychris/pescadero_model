@@ -30,11 +30,11 @@ recs.append(dict(
 # ---------------------------
 
 recs.append(dict(
-    run_dir='data_2016long_3d_asbuilt_impaired_scen1-v003',
+    run_dir='data_2016long_3d_asbuilt_impaired_scen1_l100-v003',
     scen=1,
     layers=100,
     status='running', 
-    # 6/24: anticipate 7/12 finish roughly 
+    # 6/24: anticipate 7/12 finish roughly. 7/15 it crashed with dt=0.001
     flows='impaired'
 ))
 # v001 died at 49.6%. Mass balance okay so far. keep as backup
