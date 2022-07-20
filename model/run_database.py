@@ -1,3 +1,29 @@
+(base) rustyh@farm:~/src/pescadero/model/model$ ./show_status
+./data_2016long_3d_asbuilt_impaired_scen1_slr0.61m_l100-v005
+** INFO   :         143d 13:20:00         98d 10:40:00         11d 22:13:04          8d  4:16:18      28352    59.3%     0.59406
+slurm_out-51796764.output
+
+./data_2016long_3d_asbuilt_impaired_scen3_slr0.61m_l100-v002
+** INFO   :          80d 12:25:00        161d 11:35:00          5d 14:52:18         11d  6:28:54      46507    33.3%     4.16667
+slurm_out-52132131.output
+
+./data_2016long_3d_asbuilt_impaired_scen2_l100-v006
+** INFO   :         119d 20:45:00        122d  3:15:00          9d 18:06:29          9d 22:32:11      35175    49.5%     0.34014
+slurm_out-51946026.output
+
+./data_2016long_3d_asbuilt_impaired_scen1_l100-v004
+** INFO   :          24d 19:40:00        217d  4:20:00          0d 17:18:02          6d  7:21:56      62548    10.3%     4.10959
+slurm_out-52377969.output
+
+./data_2016long_3d_asbuilt_impaired_scen3_l100-v009
+** INFO   :         192d 17:05:00         49d  6:55:00         16d 12:26:18          4d  5:23:30      14195    79.6%     0.56497
+slurm_out-51569623.output
+
+./data_2016long_3d_asbuilt_impaired_scen0_slr0.61m_l100-v005
+** INFO   :         187d 15:15:00         54d  8:45:00         16d 12:51:27          4d 18:58:53      15657    77.5%     1.21951
+slurm_out-51569573.output
+
+
 import pandas as pd
 import stompy.model.delft.dflow_model as dfm
 
@@ -267,6 +293,18 @@ recs.append(dict(
     slr=0.61
 ))
 
+# Some l100 SLR runs that were stopped to make way for pesca_butano_v08/grid54 runs
+recs.append(dict(
+    run_dir='data_2016long_3d_asbuilt_impaired_scen1_slr0.61m_l100-v005',
+    scen=1, layers=100, status='stopped at 98d remaining', flows='impaired', slr=0.61))
+
+recs.append(dict(
+    run_dir='data_2016long_3d_asbuilt_impaired_scen3_slr0.61m_l100-v002',
+    scen=3,layers=100, status='stopped at 161d remaining', flows='impaired', slr=0.61))
+
+recs.append(dict(
+    run_dir='data_2016long_3d_asbuilt_impaired_scen0_slr0.61m_l100-v005',
+    scen=0,layers=100, status='stopped at 54d remaining', flows='impaired', slr=0.61))
 
 # ----------------------
 
