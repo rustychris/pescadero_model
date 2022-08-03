@@ -24,10 +24,9 @@ recs.append(dict(
 #  data_2016long_3d_asbuilt_impaired_scen0_l100-v024
 # two more grid updates, and we're at v026, which looks promising.
 # But v026 ends at 84%, (38d remaining) - went unstable.
-# v027 is running, due to finish 7/30.
 
 # NEXT: 
-#   Check on v027 -- on track to finish 7/6
+#   Check on v027 -- on track to finish 8/7
 
 # ---------------------------
 
@@ -53,9 +52,11 @@ recs.append(dict(
 #   remains as a backup.
 # v003 crashed with 84d remaining.
 # v004 running, to finish around 7/30. 7/25: 129d remaining.
+#      8/1: 91d remaining. 8d to go.
+#      8/3: 85d remaining, 8d to go. :-(
 
 # NEXT: 
-#  - check for progress on v004
+#  - check for progress on v004 -- very close to surpassing v003.
 
 # -----------------------------------
 
@@ -83,6 +84,9 @@ recs.append(dict(
 # 7/25: v006 has 93d, 9.5d to go. hrrmph     
 # 7/22: v007 got off to a rocky start with a bad node. 224d remaining, but projected 7d to go.
 # 7/25: v007 173d / 9d to go.  meh.
+# 8/1:  v007 111d / 9d to go. :-(
+# 8/2:       103d / 9d to go. :-(((
+# 8/3:       100d / 9d to go
 
 # NEXT:
 #  - check progress of v006, eventually replace with v007_r00
@@ -137,6 +141,8 @@ recs.append(dict(
 #       should be job 51569623. Ran out of time.
 #       how long had it been stuck at low dt?
 # v010: 191d remaining (8/1).  Checked 7/25 and it is 10 days out, 158d remaining. (8/4)
+#     Checked 8/1, 74d remaining, (8/6 finish).
+#     8/2 64d remaining. 8/6 finish.
 
 # NEXT:
 #  - continue to check on v010
