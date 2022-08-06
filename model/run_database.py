@@ -9,7 +9,7 @@ recs=[]
 
 # ----------------------
 recs.append(dict(
-    run_dir='data_2016long_3d_asbuilt_impaired_scen0_l100-v026',
+    run_dir='data_2016long_3d_asbuilt_impaired_scen0_l100-v027',
     scen=0,
     layers=100,
     period='2016long',
@@ -24,18 +24,20 @@ recs.append(dict(
 #  data_2016long_3d_asbuilt_impaired_scen0_l100-v024
 # two more grid updates, and we're at v026, which looks promising.
 # But v026 ends at 84%, (38d remaining) - went unstable.
+# Going ahead and switching this to v027. v026 has 10 more days of output at the moment
+# but I'd rather not get any surprises later on -- see the v027 output now.
 
 # NEXT: 
-#   Check on v027 -- on track to finish 8/7
+#   Check on v027 -- on track to finish 8/8
 
 # ---------------------------
 
 recs.append(dict(
-    run_dir='data_2016long_3d_asbuilt_impaired_scen1_l100-v003',
+    run_dir='data_2016long_3d_asbuilt_impaired_scen1_l100-v004',
     scen=1,
     layers=100,
     period='2016long',
-    status='crashed', 
+    status='running', 
     flows='impaired'
 ))
 # v001 died at 49.6%. Mass balance okay so far. keep as backup
@@ -54,6 +56,7 @@ recs.append(dict(
 # v004 running, to finish around 7/30. 7/25: 129d remaining.
 #      8/1: 91d remaining. 8d to go.
 #      8/3: 85d remaining, 8d to go. :-(
+#      8/5: 76d remaining, 7+d to go.
 
 # NEXT: 
 #  - check for progress on v004 -- very close to surpassing v003.
@@ -61,11 +64,12 @@ recs.append(dict(
 # -----------------------------------
 
 recs.append(dict(
-    run_dir='data_2016long_3d_asbuilt_impaired_scen2_l100-v006',
+    #run_dir='data_2016long_3d_asbuilt_impaired_scen2_l100-v006',
+    run_dir='data_2016long_3d_asbuilt_impaired_scen2_l100-v007_r00',
     scen=2,
     layers=100,
     period='2016long',
-    status='running',
+    status='stopped',
     flows='impaired'
 ))
 # v004 is also 100 layers, it's running, it's at 50.3%
@@ -87,23 +91,19 @@ recs.append(dict(
 # 8/1:  v007 111d / 9d to go. :-(
 # 8/2:       103d / 9d to go. :-(((
 # 8/3:       100d / 9d to go
+# 8/5:        88d / 8.5d to go.
 
 # NEXT:
 #  - check progress of v006, eventually replace with v007_r00
 
 # ----------------------------
 
-# similar to the 30 layer version of this (v003, later v005),
-# this has stalled out. It's at 67.5%, 163d
-# dt is down to 0.016s, with 64 substeps for scalar.
-# will kill this, in order to see if the restart of v003 is telling
-# at all. then consider a restart using the standard compile
 recs.append(dict(
-    run_dir='data_2016long_3d_asbuilt_impaired_scen3_l100-v009',
+    run_dir='data_2016long_3d_asbuilt_impaired_scen3_l100-v010',
     scen=3,
     period='2016long',
     layers=100,
-    status='stopped',
+    status='running',
     flows='impaired'
 ))
 
@@ -143,6 +143,7 @@ recs.append(dict(
 # v010: 191d remaining (8/1).  Checked 7/25 and it is 10 days out, 158d remaining. (8/4)
 #     Checked 8/1, 74d remaining, (8/6 finish).
 #     8/2 64d remaining. 8/6 finish.
+#     8/5 48d remaining. 8/9 finish.
 
 # NEXT:
 #  - continue to check on v010
