@@ -15,7 +15,7 @@ fi
 for RUN in $DIRS ; do
 	echo $RUN
         dia_filename=$RUN/DFM_OUTPUT_flowfm/flowfm_0000.dia
-	tail -5000 $dia_filename | grep % | tail -1 
+	tail -15000 $dia_filename | grep % | tail -1 
 
 	grep -l `basename $RUN`/ slurm*
 	echo

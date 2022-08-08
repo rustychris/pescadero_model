@@ -1,7 +1,7 @@
 """
 Base subclass of DFlowModel for Pescadero-Butano domain
 """
-import os,sys
+import os,sys, glob
 import re
 import xarray as xr
 import numpy as np
@@ -60,7 +60,9 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
     # relative to model directory. Grid with no bathymetry
     #grid_file="../grids/pesca_butano_v05/quad_tri_v21-edit30.nc"
     #grid_file="../grids/pesca_butano_v06/quad_tri_v21-edit38.nc"
-    grid_file="../grids/pesca_butano_v07/quad_tri_v21-edit46.nc"
+    #grid_file="../grids/pesca_butano_v07/quad_tri_v21-edit46.nc"
+    grid_file="../grids/pesca_butano_v08/grid-edit54.nc"
+    
     
     def configure(self):
         super(PescaButanoBaseMixin,self).configure()
@@ -192,7 +194,7 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
         # Check for stale or missing:
         gen_grid =utils.is_stale(self.grid_with_bathy_path,[dem_fn,self.grid_nobathy_path])
         line_shp=os.path.join(self.grid_dir,'line_features.shp')
-        gen_weirs=utils.is_stale(self.fixed_weir_fn, [dem_fn,line_shp])
+        gen_weirs=utils.is_stale(self.fixed_weir_fn, [dem_fn] + glob.glob(line_shp.replace('.shp','.*')))
 
         self.log.info("New grid with bathy needed? %s"%gen_grid)
         self.log.info("New fixed weirs needed? %s"%gen_weirs)

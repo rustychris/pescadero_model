@@ -581,7 +581,7 @@ def driver_main(args):
     shutil.copyfile(__file__,os.path.join(script_dir,os.path.basename(__file__)))
     shutil.copyfile("pesca_base.py",os.path.join(script_dir,"pesca_base.py"))
     shutil.copyfile("local_config.py",os.path.join(script_dir,"local_config.py"))
-    with open(os.path.join(script_dir,"cmdlne"),'wt') as fp:
+    with open(os.path.join(script_dir,"cmdline"),'wt') as fp:
         fp.write(str(args))
         fp.write("\n")
         fp.write(" ".join(sys.argv))

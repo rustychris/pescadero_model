@@ -12,7 +12,8 @@ recs.append(dict(
     run_dir='data_2016long_3d_asbuilt_impaired_scen0_l100-v026',
     scen=0,
     layers=100,
-    status='resumed running',
+    period='2016long',
+    status='running',
     flows='impaired'
 ))
 
@@ -22,10 +23,10 @@ recs.append(dict(
 # started a new run with new grid:
 #  data_2016long_3d_asbuilt_impaired_scen0_l100-v024
 # two more grid updates, and we're at v026, which looks promising.
+# But v026 ends at 84%, (38d remaining) - went unstable.
 
 # NEXT: 
-#   Check on r01 -- on track to finish 7/6.
-#   Check on v026 -- on track to finish 7/6
+#   Check on v027 -- on track to finish 8/7
 
 # ---------------------------
 
@@ -33,8 +34,8 @@ recs.append(dict(
     run_dir='data_2016long_3d_asbuilt_impaired_scen1_l100-v003',
     scen=1,
     layers=100,
-    status='running', 
-    # 6/24: anticipate 7/12 finish roughly. 7/15 it crashed with dt=0.001
+    period='2016long',
+    status='crashed', 
     flows='impaired'
 ))
 # v001 died at 49.6%. Mass balance okay so far. keep as backup
@@ -49,16 +50,21 @@ recs.append(dict(
 #   with volume 0.0864. flows don't look crazy, I think it's just a really shallow layer.
 # 6/30: stopped scen1-r00 to try run with new grid. accidentally nuked v002. v001
 #   remains as a backup.
+# v003 crashed with 84d remaining.
+# v004 running, to finish around 7/30. 7/25: 129d remaining.
+#      8/1: 91d remaining. 8d to go.
+#      8/3: 85d remaining, 8d to go. :-(
 
 # NEXT: 
-#  - check for progress on v003
+#  - check for progress on v004 -- very close to surpassing v003.
 
 # -----------------------------------
 
 recs.append(dict(
-    run_dir='data_2016long_3d_asbuilt_impaired_scen2-v004_r01',
+    run_dir='data_2016long_3d_asbuilt_impaired_scen2_l100-v006',
     scen=2,
     layers=100,
+    period='2016long',
     status='running',
     flows='impaired'
 ))
@@ -68,14 +74,22 @@ recs.append(dict(
 # r00 resume suffered from restart bug.  -- archived
 # r01 started 6/23, but was slow. killed.
 # new r00 started with old DFM compile.  Got slow around 11/27/2016, projecting 40 days.
-#   Gambling on the new grid, killed r00.
+#   Gambling on the new grid, killed r00. 91d remaining.
 
 # Substantial grid edits, and started a new data_2016long_3d_asbuilt_impaired_scen2_l100-v005
 # At 24h, it's 18 days in, projecting a 13 day run total.
 # - salt balance? fine so far.
+# stopped at 127d remaining. maybe cancelled due to subsequent grid edits.
+# 7/22: v006 has 107d remaining, 10d to go.
+# 7/25: v006 has 93d, 9.5d to go. hrrmph     
+# 7/22: v007 got off to a rocky start with a bad node. 224d remaining, but projected 7d to go.
+# 7/25: v007 173d / 9d to go.  meh.
+# 8/1:  v007 111d / 9d to go. :-(
+# 8/2:       103d / 9d to go. :-(((
+# 8/3:       100d / 9d to go
 
 # NEXT:
-#  - check progress of v005
+#  - check progress of v006, eventually replace with v007_r00
 
 # ----------------------------
 
@@ -85,10 +99,11 @@ recs.append(dict(
 # will kill this, in order to see if the restart of v003 is telling
 # at all. then consider a restart using the standard compile
 recs.append(dict(
-    run_dir='data_2016long_3d_asbuilt_impaired_scen3-v004_r00',
+    run_dir='data_2016long_3d_asbuilt_impaired_scen3_l100-v009',
     scen=3,
+    period='2016long',
     layers=100,
-    status='dead',
+    status='stopped',
     flows='impaired'
 ))
 
@@ -120,11 +135,18 @@ recs.append(dict(
 # At 24h, it's 18 days in, projecting a 13 day run total.
 # Trying to decide if/when to switch horses.
 # - salt balance? fine (not surprising, it's early)
-
+# v008 ends with 145d remaining. I think the grid edits motivated a new run.
+# More grid edits and I now have v009, and v010.
+# v009: 39d remaining (7/26). checked back 7/25 and it was really bogged down (dt=0.02)
+#       should be job 51569623. Ran out of time.
+#       how long had it been stuck at low dt?
+# v010: 191d remaining (8/1).  Checked 7/25 and it is 10 days out, 158d remaining. (8/4)
+#     Checked 8/1, 74d remaining, (8/6 finish).
+#     8/2 64d remaining. 8/6 finish.
 
 # NEXT:
-#  - check on progress, balance of r03, and r00
-#  - check on progress of the fresh run.
+#  - continue to check on v010
+#  - once some tidal runs are complete, consider resuming v009.
 
 # -------------------------------
 
@@ -267,6 +289,18 @@ recs.append(dict(
     slr=0.61
 ))
 
+# Some l100 SLR runs that were stopped to make way for pesca_butano_v08/grid54 runs
+recs.append(dict(
+    run_dir='data_2016long_3d_asbuilt_impaired_scen1_slr0.61m_l100-v005',
+    scen=1, layers=100, status='stopped at 98d remaining', flows='impaired', slr=0.61))
+
+recs.append(dict(
+    run_dir='data_2016long_3d_asbuilt_impaired_scen3_slr0.61m_l100-v002',
+    scen=3,layers=100, status='stopped at 161d remaining', flows='impaired', slr=0.61))
+
+recs.append(dict(
+    run_dir='data_2016long_3d_asbuilt_impaired_scen0_slr0.61m_l100-v005',
+    scen=0,layers=100, status='stopped at 54d remaining', flows='impaired', slr=0.61))
 
 # ----------------------
 
@@ -346,6 +380,45 @@ recs.append(dict(
     flows='impaired'
 ))
 
+##
+
+# 3D tidal runs
+recs.append(dict(
+    run_dir='data_2016long_3d_asbuilt_impaired_scen0_l100-v027rtidal',
+    scen=0,
+    layers=100,
+    period='2016tidal',
+    status='completed',
+    flows='impaired'
+))
+
+
+recs.append(dict(
+    run_dir='data_2016long_3d_asbuilt_impaired_scen1_l100-v004rtidal',
+    scen=1,
+    layers=100,
+    period='2016tidal',
+    status='completed',
+    flows='impaired'
+))
+
+recs.append(dict(
+    run_dir='data_2016long_3d_asbuilt_impaired_scen2_l100-v007_r00rtidal',
+    scen=2,
+    layers=100,
+    period='2016tidal',
+    status='completed',
+    flows='impaired'
+))
+
+recs.append(dict(
+    run_dir='data_2016long_3d_asbuilt_impaired_scen3_l100-v010rtidal',
+    scen=3,
+    layers=100,
+    period='2016tidal',
+    status='completed',
+    flows='impaired'
+))
 
 
 #####################
