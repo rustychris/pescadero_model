@@ -33,7 +33,7 @@ recs.append(dict(
 # ---------------------------
 
 recs.append(dict(
-    run_dir='data_2016long_3d_asbuilt_impaired_scen1_l100-v004',
+    run_dir='data_2016long_3d_asbuilt_impaired_scen1_l100-v004_r00',
     scen=1,
     layers=100,
     period='2016long',
@@ -57,9 +57,10 @@ recs.append(dict(
 #      8/1: 91d remaining. 8d to go.
 #      8/3: 85d remaining, 8d to go. :-(
 #      8/5: 76d remaining, 7+d to go.
+# 8/9: v004 failed with timeout. resumed as v004_r00 with 48d remaining
 
 # NEXT: 
-#  - check for progress on v004 -- very close to surpassing v003.
+#  - check for progress on v004_r00
 
 # -----------------------------------
 
@@ -421,6 +422,26 @@ recs.append(dict(
     flows='impaired'
 ))
 
+
+# 3D breach runs
+recs.append(dict(
+    run_dir='data_2016long_3d_asbuilt_impaired_scen0_l100-v027rbreach',
+    scen=0,
+    layers=100,
+    period='2016breach',
+    status='completed',
+    flows='impaired'
+))
+
+
+recs.append(dict(
+    run_dir='data_2016long_3d_asbuilt_impaired_scen1_l100-v004rbreach',
+    scen=1,
+    layers=100,
+    period='2016breach',
+    status='running',
+    flows='impaired'
+))
 
 #####################
 all_runs=pd.DataFrame(recs)
