@@ -28,6 +28,7 @@ class PescaRestart(local_config.LocalConfig,dfm.DFlowModel):
                 # If/when this gets smarter, say overriding BCs, it will have to become
                 # more granular here. One option would be to create BC instances that know
                 # how to copy over the original files and stanzas verbatim.
+                self.customize() # probably not something that will live beyond this file.
             else:
                 # less sure about these.
                 self.update_config()
@@ -70,9 +71,28 @@ class PescaRestart(local_config.LocalConfig,dfm.DFlowModel):
                 
             if do_copy:
                 shutil.copyfile(fn_path, os.path.join(self.run_dir,fn))
-            
-                
-            
+    def customize(self):
+        """
+        Once the model inputs have been copied to the new folder,
+        we have a chance to modify as needed. 
+        """
+        # For the tidal restarts this is when we can update the cross sections.
+
+        #self.add_monitor_points(self.match_gazetteer(geom_type='Point',type='monitor'))
+        # Very poor naming.
+        # Recreate the monitoring transects
+        self.mon_sections=[]
+        # It's messy to subclass PescaBase for the restart, but otherwise it's not easy
+        # to know which grid to use.
+        import pesca_base
+        grid_file=pesca_base.PescaButanoBaseMixin.grid_file
+        grid_dir=os.path.join(os.path.dirname(__file__),os.path.dirname(grid_file))
+        
+        self.log.warning(f"Inferring that the grid is {grid_dir}")
+        self.add_gazetteer(os.path.join(grid_dir,"line_features.shp"))
+        self.add_monitor_sections(self.match_gazetteer(geom_type='LineString',type='transect'))
+        self.write_monitor_sections(append=False)
+        
 
 
 log=logging.getLogger()

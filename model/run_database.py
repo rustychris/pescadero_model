@@ -9,7 +9,7 @@ recs=[]
 
 # ----------------------
 recs.append(dict(
-    run_dir='data_2016long_3d_asbuilt_impaired_scen0_l100-v027',
+    run_dir='data_2016long_3d_asbuilt_impaired_scen0_l100-v027', # _r00',
     scen=0,
     layers=100,
     period='2016long',
@@ -28,7 +28,7 @@ recs.append(dict(
 # but I'd rather not get any surprises later on -- see the v027 output now.
 
 # NEXT: 
-#   Check on v027 -- on track to finish 8/8
+#   Once rtidal runs are complete, queue up v027_r00 again
 
 # ---------------------------
 
@@ -100,7 +100,7 @@ recs.append(dict(
 # ----------------------------
 
 recs.append(dict(
-    run_dir='data_2016long_3d_asbuilt_impaired_scen3_l100-v010',
+    run_dir='data_2016long_3d_asbuilt_impaired_scen3_l100-v010_r00',
     scen=3,
     period='2016long',
     layers=100,
