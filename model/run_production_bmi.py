@@ -568,10 +568,10 @@ def driver_main(args):
     # Temporary change...
     # model.mdu['output','MapInterval']=3600
 
-    model.write()
+    model.write() # this is now callin DFlowModel.write() for restarts
 
     # be careful with restarts
-    if model.restart:
+    if model.restart and args.shallow:
         script_dir=os.path.join(model.run_dir,'scripts'+suffix)
         if not os.path.exists(script_dir):
             os.makedirs(script_dir)
