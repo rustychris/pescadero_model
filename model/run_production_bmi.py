@@ -438,7 +438,17 @@ def driver_main(args):
             # machinery, seems like a deep restart would be appropriate.
             # in that case, need a new run_dir:
             parent_dir=os.path.dirname(args.mdu)
-            for suffidx in range(10):
+            import re
+            m=re.search('_r([0-9][0-9])$',parent_dir)
+            if m:
+                # Not trying for perfection -- just handle the common case of chained
+                # restarts
+                parent_restart=int(m.group(1))
+                parent_dir=parent_dir[:m.start()] # drops the _rNN
+            else:
+                parent_restart=-1
+
+            for suffidx in range(parent_restart,10):
                 suffix=f"_r{suffidx:02d}"
                 run_dir=parent_dir+suffix
                 if not os.path.exists(run_dir):
