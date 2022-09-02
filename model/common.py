@@ -1,4 +1,7 @@
 import numpy as np
+import os
+import xarray as xr
+from stompy import utils
 
 section_signed_fields=['cross_section_discharge',
                        'cross_section_salt',
@@ -51,3 +54,39 @@ def prechain(dss):
                         ds[fld]=dss[0][fld]
             out.append(ds)
         return out
+
+
+
+# Slimmed-down history files
+def his_cache(model,stations,variable='salinity',cache_dir="cache",force=False,
+              chain=True):
+    """
+    Extract one variable at one station from chained history output, backed by
+    file cache.
+    'stations' is plural because the dimension in the nc file is plural -- just specify
+    a single station, by coordinate (string).
+    """
+    # This would probably be better as non-chained, and chain the results at
+    # a higher level.
+    # N.B. cache_dir is under the model run dir
+    his_fn=model.his_output()
+    cache_path=os.path.join(os.path.dirname(his_fn),cache_dir)
+    if not os.path.exists(cache_path):
+        os.makedirs(cache_path)
+
+    if chain:
+        nochain=""
+    else:
+        nochain="nochain"
+    cache_fn=os.path.join(cache_path,
+                          f"v00{nochain}-stations_{stations}-var_{variable}.nc")
+    if force or utils.is_stale(cache_fn,[his_fn],tol_s=7200):
+        print(f"{cache_fn} cache miss")
+        his=model.his_dataset(chain=chain,prechain=prechain)
+        da=his[variable].sel(stations=stations)
+        da.to_netcdf(cache_fn)
+        return da
+    else:
+        ds=xr.load_dataset(cache_fn)
+        return ds[variable]
+    

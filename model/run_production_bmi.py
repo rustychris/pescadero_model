@@ -448,7 +448,7 @@ def driver_main(args):
             else:
                 parent_restart=-1
 
-            for suffidx in range(parent_restart,10):
+            for suffidx in range(parent_restart+1,10):
                 suffix=f"_r{suffidx:02d}"
                 run_dir=parent_dir+suffix
                 if not os.path.exists(run_dir):
