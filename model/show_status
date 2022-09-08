@@ -5,7 +5,7 @@ if [ $# -ne 0 ] ; then
     DIRS=$*
 else
     DIRS=""
-    for dia_filename in `find . -path "./data_*/DFM_OUTPUT*/flowfm*_0000.dia" -mmin -10` ; do
+    for dia_filename in `find . -path "./data*/DFM_OUTPUT*/flowfm*_0000.dia" -mmin -10` ; do
             RUN=`dirname $dia_filename`
 	    RUN=`dirname $RUN`
             DIRS="$DIRS $RUN"

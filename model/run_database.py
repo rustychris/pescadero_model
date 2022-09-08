@@ -61,7 +61,27 @@ recs.append(dict(
     scen=0,
     layers=100,
     period='2016long',
-    status='running',
+    status='complete',
+    flows='impaired',
+    slr=0.61
+))
+# tidal version of that
+recs.append(dict(
+    run_dir='data_2016long_3d_asbuilt_impaired_scen0_slr0.61m_l100-v006rtidal',
+    scen=0,
+    layers=100,
+    period='2016tidal',
+    status='complete',
+    flows='impaired',
+    slr=0.61
+))
+# breach version
+recs.append(dict(
+    run_dir='data_2016long_3d_asbuilt_impaired_scen0_slr0.61m_l100-v006_r00rbreach',
+    scen=0,
+    layers=100,
+    period='2016breach',
+    status='complete',
     flows='impaired',
     slr=0.61
 ))
@@ -71,6 +91,11 @@ recs.append(dict(
     scen=1, layers=100, status='complete', flows='impaired', slr=0.61,
     period='2016long'))
 
+# tidal version
+recs.append(dict(
+    run_dir='data_2016long_3d_asbuilt_impaired_scen1_slr0.61m_l100-v006rtidal',
+    scen=1, layers=100, status='running', flows='impaired', slr=0.61,
+    period='2016tidal'))
 
 recs.append(dict(
     #run_dir='data_2016long_3d_asbuilt_impaired_scen2_slr0.61m_l100-v000',
@@ -78,12 +103,22 @@ recs.append(dict(
     scen=2, layers=100, status='running', flows='impaired', slr=0.61,
     period='2016long'))
 
+# tidal version
+recs.append(dict(
+    run_dir='datacws_2016long_3d_asbuilt_impaired_scen2_slr0.61m_l100-v000rtidal',
+    scen=2, layers=100, status='queued', flows='impaired', slr=0.61,
+    period='2016tidal'))
+
 recs.append(dict(
     run_dir='data_2016long_3d_asbuilt_impaired_scen3_slr0.61m_l100-v003',
     scen=3, layers=100, status='running', flows='impaired', slr=0.61,
     period='2016long'))
 
-
+# tidal version
+recs.append(dict(
+    run_dir='data_2016long_3d_asbuilt_impaired_scen3_slr0.61m_l100-v003rtidal',
+    scen=3, layers=100, status='queued', flows='impaired', slr=0.61,
+    period='2016tidal'))
 
 # ----------------------
 
