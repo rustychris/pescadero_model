@@ -90,3 +90,15 @@ def his_cache(model,stations,variable='salinity',cache_dir="cache",force=False,
         ds=xr.load_dataset(cache_fn)
         return ds[variable]
     
+def save_as_layers(fig,img_fn,labels,**save_args):
+    ax=fig.axes[0]
+
+    # Remove starting at the end
+    for i in range(len(labels))[::-1]:
+        label=labels[i]
+        line_labels=[l.get_label() for l in ax.lines]
+        idx=line_labels.index(label)
+        del ax.lines[idx]
+        fig.savefig(img_fn.replace('.png',f'{i}.png'),**save_args)
+                       
+     
