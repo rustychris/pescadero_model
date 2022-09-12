@@ -97,8 +97,13 @@ recs.append(dict(
     scen=1, layers=100, status='running', flows='impaired', slr=0.61,
     period='2016tidal'))
 
+# breach version
 recs.append(dict(
-    #run_dir='data_2016long_3d_asbuilt_impaired_scen2_slr0.61m_l100-v000',
+    run_dir='data_2016long_3d_asbuilt_impaired_scen1_slr0.61m_l100-v006rbreach',
+    scen=1, layers=100, status='running', flows='impaired', slr=0.61,
+    period='2016breach'))
+
+recs.append(dict(
     run_dir='datacws_2016long_3d_asbuilt_impaired_scen2_slr0.61m_l100-v000',
     scen=2, layers=100, status='running', flows='impaired', slr=0.61,
     period='2016long'))
@@ -108,6 +113,12 @@ recs.append(dict(
     run_dir='datacws_2016long_3d_asbuilt_impaired_scen2_slr0.61m_l100-v000rtidal',
     scen=2, layers=100, status='queued', flows='impaired', slr=0.61,
     period='2016tidal'))
+
+# Breach version
+recs.append(dict(
+    run_dir='datacws_2016long_3d_asbuilt_impaired_scen2_slr0.61m_l100-v000rbreach',
+    scen=2, layers=100, status='running', flows='impaired', slr=0.61,
+    period='2016breach'))
 
 recs.append(dict(
     run_dir='data_2016long_3d_asbuilt_impaired_scen3_slr0.61m_l100-v003',
@@ -119,6 +130,12 @@ recs.append(dict(
     run_dir='data_2016long_3d_asbuilt_impaired_scen3_slr0.61m_l100-v003rtidal',
     scen=3, layers=100, status='queued', flows='impaired', slr=0.61,
     period='2016tidal'))
+
+# breach version -- this one failed with bus error.
+recs.append(dict(
+    run_dir='data_2016long_3d_asbuilt_impaired_scen3_slr0.61m_l100-v003rbreach',
+    scen=3, layers=100, status='interrupted', flows='impaired', slr=0.61,
+    period='2016breach'))
 
 # ----------------------
 
@@ -322,7 +339,7 @@ recs.append(dict(
     layers=100,
     slr=0.0,
     period='2013',
-    status='running',
+    status='interrupted', # Cancelled to make way for priority tidal2 runs.
     flows='unimpaired'
 ))
 

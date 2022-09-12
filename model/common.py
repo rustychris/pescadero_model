@@ -58,8 +58,8 @@ def prechain(dss):
 
 
 # Slimmed-down history files
-def his_cache(model,stations,variable='salinity',cache_dir="cache",force=False,
-              chain=True):
+def his_cache(model,variable='salinity',cache_dir="cache",force=False,
+              chain=True, **sel_kws):
     """
     Extract one variable at one station from chained history output, backed by
     file cache.
@@ -78,12 +78,15 @@ def his_cache(model,stations,variable='salinity',cache_dir="cache",force=False,
         nochain=""
     else:
         nochain="nochain"
+        
+    sel_str="-".join( [f"{k}_{sel_kws[k]}" for k in sel_kws])
+        
     cache_fn=os.path.join(cache_path,
-                          f"v00{nochain}-stations_{stations}-var_{variable}.nc")
+                          f"v00{nochain}-{sel_str}-var_{variable}.nc")
     if force or utils.is_stale(cache_fn,[his_fn],tol_s=7200):
         print(f"{cache_fn} cache miss")
         his=model.his_dataset(chain=chain,prechain=prechain)
-        da=his[variable].sel(stations=stations)
+        da=his[variable].sel(**sel_kws)
         da.to_netcdf(cache_fn)
         return da
     else:
