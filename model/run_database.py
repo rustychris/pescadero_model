@@ -67,7 +67,7 @@ recs.append(dict(
 ))
 # tidal version of that
 recs.append(dict(
-    run_dir='data_2016long_3d_asbuilt_impaired_scen0_slr0.61m_l100-v006rtidal',
+    run_dir='data_2016long_3d_asbuilt_impaired_scen0_slr0.61m_l100-v006rtidal2',
     scen=0,
     layers=100,
     period='2016tidal',
@@ -93,7 +93,7 @@ recs.append(dict(
 
 # tidal version
 recs.append(dict(
-    run_dir='data_2016long_3d_asbuilt_impaired_scen1_slr0.61m_l100-v006rtidal',
+    run_dir='data_2016long_3d_asbuilt_impaired_scen1_slr0.61m_l100-v006rtidal2',
     scen=1, layers=100, status='running', flows='impaired', slr=0.61,
     period='2016tidal'))
 
@@ -110,7 +110,7 @@ recs.append(dict(
 
 # tidal version
 recs.append(dict(
-    run_dir='datacws_2016long_3d_asbuilt_impaired_scen2_slr0.61m_l100-v000rtidal',
+    run_dir='datacws_2016long_3d_asbuilt_impaired_scen2_slr0.61m_l100-v000rtidal2',
     scen=2, layers=100, status='queued', flows='impaired', slr=0.61,
     period='2016tidal'))
 
@@ -127,13 +127,14 @@ recs.append(dict(
 
 # tidal version
 recs.append(dict(
-    run_dir='data_2016long_3d_asbuilt_impaired_scen3_slr0.61m_l100-v003rtidal',
+    run_dir='data_2016long_3d_asbuilt_impaired_scen3_slr0.61m_l100-v003rtidal2',
     scen=3, layers=100, status='queued', flows='impaired', slr=0.61,
     period='2016tidal'))
 
-# breach version -- this one failed with bus error.
+# breach version -- this one failed with bus error. running a new copy. this one
+# has maybe 6 days of output already.  Too much work to continue that run.
 recs.append(dict(
-    run_dir='data_2016long_3d_asbuilt_impaired_scen3_slr0.61m_l100-v003rbreach',
+    run_dir='temp-data_2016long_3d_asbuilt_impaired_scen3_slr0.61m_l100-v003rbreach',
     scen=3, layers=100, status='interrupted', flows='impaired', slr=0.61,
     period='2016breach'))
 
@@ -218,7 +219,9 @@ recs.append(dict(
 
 # 3D tidal runs
 recs.append(dict(
-    run_dir='data_2016long_3d_asbuilt_impaired_scen0_l100-v027rtidal',
+    run_dir='data_2016long_3d_asbuilt_impaired_scen0_l100-v027rtidal2',
+    # this one is only 36h
+    #run_dir='data_2016long_3d_asbuilt_impaired_scen0_l100-v027rtidal',
     scen=0,
     layers=100,
     slr=0.0,
@@ -229,7 +232,7 @@ recs.append(dict(
 
 
 recs.append(dict(
-    run_dir='data_2016long_3d_asbuilt_impaired_scen1_l100-v004rtidal',
+    run_dir='data_2016long_3d_asbuilt_impaired_scen1_l100-v004rtidal2',
     scen=1,
     layers=100,
     slr=0.0,
@@ -239,7 +242,7 @@ recs.append(dict(
 ))
 
 recs.append(dict(
-    run_dir='data_2016long_3d_asbuilt_impaired_scen2_l100-v007_r00rtidal',
+    run_dir='data_2016long_3d_asbuilt_impaired_scen2_l100-v007_r00rtidal2',
     scen=2,
     layers=100,
     slr=0.0,
@@ -249,7 +252,7 @@ recs.append(dict(
 ))
 
 recs.append(dict(
-    run_dir='data_2016long_3d_asbuilt_impaired_scen3_l100-v010rtidal',
+    run_dir='data_2016long_3d_asbuilt_impaired_scen3_l100-v010rtidal2',
     scen=3,
     layers=100,
     slr=0.0,
