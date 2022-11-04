@@ -179,6 +179,8 @@ class PescaButanoBaseMixin(local_config.LocalConfig):
 
     def add_bathy_to_grid_and_levees(self):
         bathy_dir=local_config.bathy_dir
+        # Some confusion over whether these should be 20210920, or 0826.
+        # 0920 appears to be missing the channel that connects to the salt panne.
         bathy_asbuilt_fn=os.path.join(bathy_dir,'compiled-dem-asbuilt-20210920-1m.tif')
         bathy_existing_fn=os.path.join(bathy_dir,'compiled-dem-existing-20210920-1m.tif')
         

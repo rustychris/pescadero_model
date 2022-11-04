@@ -1,5 +1,7 @@
 import numpy as np
 import os
+import stompy.model.delft.dflow_model as dfm
+from stompy.spatial import field
 import xarray as xr
 from stompy import utils
 
@@ -105,3 +107,70 @@ def save_as_layers(fig,img_fn,labels,**save_args):
         fig.savefig(img_fn.replace('.png',f'{i}.png'),**save_args)
                        
      
+def load_or_none(rd):
+    try:
+        return dfm.DFlowModel.load(rd)
+    except FileNotFoundError:
+        return None
+    
+scen_names={0:'Base',1:'Low',2:'Medium',3:'High'}
+slr_names={0:'',0.61:'+SLR'}
+
+def name_runs(df):
+    df['name']=[scen_names[row['scen']]+slr_names[row['slr']]
+                for _,row in df.iterrows()]
+
+events=[(np.datetime64('2016-08-11'),' Closure'),
+        (np.datetime64('2016-11-01'),' Sm. Breach'),
+        (np.datetime64('2016-12-11'),' Lg. Breach'),
+        (np.datetime64('2017-02-07'),' Peak\n Flow'),
+       ]
+
+def label_events(ax,ticklabels=True):
+    # Label events
+    trans=ax.get_xaxis_transform()
+    for t,name in events:
+        if ticklabels:
+            ax.text(t,0.01,name,transform=ax.get_xaxis_transform(),va='bottom',clip_on=1)
+        ax.plot([t,t],[0.,0.03],transform=trans,color='k',lw=0.75)
+
+
+# Choose an ebb period and a flood period
+
+# For the older runs:
+#ebb_period=[np.datetime64('2016-08-04 06:30:00'),
+#            np.datetime64('2016-08-04 13:30:00')]
+#flood_period=[np.datetime64('2016-08-04 13:30:00'),
+#              np.datetime64('2016-08-04 20:00:00')]
+
+# For tidal runs based on 2016long:
+# This has been supplanted by code near the end, and longer rtidal2 runs.
+ebb_period=[np.datetime64('2016-07-31 03:30:00'), # large ebb.
+            np.datetime64('2016-07-31 11:00:00')]
+flood_period=[np.datetime64('2016-07-31 11:00:00'),
+              np.datetime64('2016-07-31 17:00:00')]
+
+# manually nudge so that lagged sections still recover ebb
+# This has been supplanted by a later tidal period that is cleaner
+# and at max spring.
+ebb_time=ebb_period[0]+(ebb_period[1]-ebb_period[0])/2 + np.timedelta64(1,'h')
+
+
+# Updated time periods for 72h runs
+spring_ebb_mid=np.datetime64("2016-08-02 10:00")
+spring_flood_mid=np.datetime64("2016-08-02 04:00")
+
+# Approximately cover tidal phase across all runs -- a little narrow
+# to avoid times that are in a different phase depending on the run.
+spring_ebb=[np.datetime64("2016-08-02 06:00"),
+            np.datetime64("2016-08-02 16:00")]
+spring_flood=[np.datetime64("2016-08-02 01:00"),
+              np.datetime64("2016-08-02 05:00")]
+
+
+def dem(version):
+    if version=='asbuilt':
+        #return field.GdalGrid("../../bathy/compiled-dem-asbuilt-20210920-1m.tif")
+        return field.GdalGrid("../../bathy/compiled-dem-asbuilt-20210826-1m.tif")
+    else:
+        raise Exception(f"Need to add in version={version} to {__file__}")

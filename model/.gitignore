@@ -38,3 +38,5 @@ run-log*
 job*-??.out
 datacws_*
 Untitled.ipynb
+export
+temp-*
