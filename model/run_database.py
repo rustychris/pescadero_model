@@ -393,8 +393,6 @@ recs.append(dict(
     flows='impaired'
 ))
 
-# There is a run for this on cws that is probably completed, but inaccessible.
-
 recs.append(dict(
     run_dir='data_2013_3d_asbuilt_unimpaired_scen0_slr0.61m_l100-v000_r00',
     scen=0,

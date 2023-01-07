@@ -27,6 +27,7 @@ os.environ['NUMEXPR_MAX_THREADS']='1'
 
 class PescaBmiSeepageMixin(object):
     extraresistance=8.0
+    mouth_min_width=5.0
 
     evap=True
 
@@ -62,7 +63,8 @@ class PescaBmiSeepageMixin(object):
         """
         ds = self.prep_qcm_data()
         crest= ds['z_thalweg']
-        width= ds['w_inlet']    
+        # 2022-12-14: always allow some flow, in case it's a scenario with higher water levels
+        width= ds['w_inlet'].clip(self.mouth_min_width)
 
         for name in ['mouth','mouth_B']:
             self.add_Structure(
@@ -330,6 +332,9 @@ def main(argv=None):
 
     parser.add_argument("--shallow",help="Set restart method to shallow (deep=False)",
                         action='store_true')
+
+    # not implemented...
+    # parser.add_argument("--mouth-min-width",help="Set lower bound on width of the mouth",default=5.0,type=float)
 
     args = parser.parse_args(argv)
 

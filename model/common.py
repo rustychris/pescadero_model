@@ -506,12 +506,27 @@ def forcing_figure(panels=['pesca_ck','lagoon_wse','source_sink','wind'],
             ax.set_ylabel('m NAVD88')
         elif panel=='source_sink':
             twinscale(ax,m2ft**3,"cfs")
-            ax.plot(qcm_sel.time, qcm_sel.seepage_abs,label="Seepage")
-            ax.plot(qcm_sel.time, qcm_sel.wave_overtop,label="Wave overtop")
+            # This used to omit the sign, but I think it makes more sense to negate
+            # so that all 3 fluxes have consistent signs.
             # Undo the calcs from pesca_base to get back m3/s
             grid_area=1940000 # m2
-            Q_ET=qcm_sel['evapotr_mmhour']*0.75*grid_area/(1000*3600)        
-            ax.plot(qcm_sel.time, Q_ET, label="ET")
+            Q_ET=qcm_sel['evapotr_mmhour']*0.75*grid_area/(1000*3600)
+
+
+            if 0:
+                ax.plot(qcm_sel.time, Q_ET, label="ET")
+                ax.plot(qcm_sel.time, -qcm_sel.seepage_abs,label="Seepage")
+                ax.plot(qcm_sel.time, qcm_sel.wave_overtop,label="Wave overtop")
+            else:
+                qcm_dt=np.median( np.diff(qcm_sel.time)/np.timedelta64(3600,'s') )
+                winsize=int(50/qcm_dt)
+                def lp(x):
+                    return filters.lowpass_fir(x,winsize=winsize)
+                ax.fill_between(qcm_sel.time, lp(Q_ET), label="ET")
+                ax.fill_between(qcm_sel.time, lp(Q_ET), lp(Q_ET-qcm_sel.seepage_abs),label="Seepage")
+                ax.fill_between(qcm_sel.time, lp(qcm_sel.wave_overtop),label="Wave overtop")
+                
+            
             ax.legend(loc='upper left',frameon=False)
             ax.set_ylabel('m$^3$/s')
         elif panel=='wind':
