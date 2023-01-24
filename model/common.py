@@ -121,9 +121,15 @@ def load_or_none(rd):
 scen_names={0:'Base',1:'Low',2:'Medium',3:'High'}
 slr_names={0:'',0.61:'+SLR'}
 
-def name_runs(df):
-    df['name']=[scen_names[row['scen']]+slr_names[row['slr']]
-                for _,row in df.iterrows()]
+def name_runs(df,overtop=False):
+    if not overtop:
+        df['name']=[scen_names[row['scen']]+slr_names[row['slr']]
+                    for _,row in df.iterrows()]
+    else:
+        overtop_names={True:'-OT',False:''}
+        df['name']=[scen_names[row['scen']]+slr_names[row['slr']]+overtop_names[row['overtop']]
+                    for _,row in df.iterrows()]
+
 
 flow_names={'impaired':'impaired', 'unimpaired':'unimpaired'}
 period_names={'2016long':'2016', '2013':'2013'}
@@ -295,54 +301,62 @@ def twin_stage(fig,runs,station='nck',top_frac=0.33,ylabel='Stage (m)',
     txt.set_visible(0)
     return ax1
 
-@memoize.memoize(key_method='str',cache_dir='cache')
+# @memoize.memoize(key_method='str',cache_dir='cache')
 def fresh_wet_area(mod,thresholds,min_depth=0.1,region_names=None,
                    poly_shp="../grids/pesca_butano_v08/polygon_features.shp"):
-    #mod=rec['model']
-    mds=mod.map_dataset(chain=True)
-
-    features=wkb2shp.shp2geom("../grids/pesca_butano_v08/polygon_features.shp")
-    polys=[]
-    for name in region_names:
-        # no need to filter on dye, and now we can use existing lagoon poly, too.
-        sel=(features['desc']==name) # &(features['type']=='dye')
-        poly=features['geom'][sel]
-        assert len(poly)==1
-        polys.append( poly[0] )
+    cache_fn=os.path.join(mod.run_dir, "fresh_wet_area_cached.pkl")
     
-    result=xr.Dataset()
-    result['time']=mds.time.compute()
-    result['min_depth']=(),min_depth
-    result['thresholds']=('threshold',),thresholds
-    if region_names is None:
-        result['region']=('region',),np.arange(len(polys))
-    else:
-        result['region']=('region',),region_names
-        
-    result['poly_area']=('region',),[poly.area for poly in polys]
+    if utils.is_stale(cache_fn,mod.map_outputs()):
+        #mod=rec['model']
+        mds=mod.map_dataset(chain=True)
 
-    Ac=mds.grid.cells_area()
+        features=wkb2shp.shp2geom("../grids/pesca_butano_v08/polygon_features.shp")
+        polys=[]
+        for name in region_names:
+            # no need to filter on dye, and now we can use existing lagoon poly, too.
+            sel=(features['desc']==name) # &(features['type']=='dye')
+            poly=features['geom'][sel]
+            assert len(poly)==1
+            polys.append( poly[0] )
 
-    poly_masks=[mds.grid.select_cells_intersecting(poly)
-                for poly in polys]
-    
-    # previously used the polygon, but that's an overestimate
-    # more comment
-    result['region_area']=('region',),[Ac[mask].sum() for mask in poly_masks]
+        result=xr.Dataset()
+        result['time']=mds.time.compute()
+        result['min_depth']=(),min_depth
+        result['thresholds']=('threshold',),thresholds
+        if region_names is None:
+            result['region']=('region',),np.arange(len(polys))
+        else:
+            result['region']=('region',),region_names
 
-    areas=np.zeros( (mds.dims['time'],len(thresholds),len(polys)),np.float64)
-    for ti,t in enumerate(mds.time.values):
-        print(f"{ti}/{mds.dims['time']}")
-        salt=mds['mesh2d_sa1'].isel(time=ti).values
-        depth=mds['mesh2d_waterdepth'].isel(time=ti).values
-        salt_max=np.nanmax(salt,axis=1)
-        
-        for thresh_i,threshold in enumerate(thresholds):
-            for region_i,poly_mask in enumerate(poly_masks):
-                valid=poly_mask & np.isfinite(salt_max) & (salt_max<threshold) & (depth>=min_depth)
-                area=Ac[valid].sum()
-                areas[ti,thresh_i,region_i]=area
-    result['habitat']=('time','threshold','region'),areas
+        result['poly_area']=('region',),[poly.area for poly in polys]
+
+        Ac=mds.grid.cells_area()
+
+        poly_masks=[mds.grid.select_cells_intersecting(poly)
+                    for poly in polys]
+
+        # previously used the polygon, but that's an overestimate
+        # more comment
+        result['region_area']=('region',),[Ac[mask].sum() for mask in poly_masks]
+
+        areas=np.zeros( (mds.dims['time'],len(thresholds),len(polys)),np.float64)
+        for ti,t in enumerate(mds.time.values):
+            print(f"{ti}/{mds.dims['time']}")
+            salt=mds['mesh2d_sa1'].isel(time=ti).values
+            depth=mds['mesh2d_waterdepth'].isel(time=ti).values
+            salt_max=np.nanmax(salt,axis=1)
+
+            for thresh_i,threshold in enumerate(thresholds):
+                for region_i,poly_mask in enumerate(poly_masks):
+                    valid=poly_mask & np.isfinite(salt_max) & (salt_max<threshold) & (depth>=min_depth)
+                    area=Ac[valid].sum()
+                    areas[ti,thresh_i,region_i]=area
+        result['habitat']=('time','threshold','region'),areas
+
+        result.to_netcdf(cache_fn)
+
+    # Always load from file to avoid inconsistent behavior.
+    result=xr.load_dataset(cache_fn)
     return result    
 
 def fig_habitat(result):

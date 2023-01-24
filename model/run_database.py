@@ -3,12 +3,18 @@ import stompy.model.delft.dflow_model as dfm
 
 recs=[]
 
+def register(**kw):
+    if 'overtop' not in kw:
+        kw['overtop']=False
+        
+    recs.append(dict(kw))
+    
 #
 # NM Scenarios, 100 Layer, Present SL
 # ==
 
 # ----------------------
-recs.append(dict(
+register(
     run_dir='data_2016long_3d_asbuilt_impaired_scen0_l100-v027_r01',
     scen=0,
     layers=100,
@@ -17,9 +23,9 @@ recs.append(dict(
     status='complete',
     terrain='asbuilt',
     flows='impaired'
-))
+)
 
-recs.append(dict(
+register(
     run_dir='data_2016long_3d_asbuilt_impaired_scen1_l100-v004_r00',
     scen=1,
     layers=100,
@@ -28,11 +34,11 @@ recs.append(dict(
     status='complete', 
     terrain='asbuilt',
     flows='impaired'
-))
+)
 
 # -----------------------------------
 
-recs.append(dict(
+register(
     run_dir='data_2016long_3d_asbuilt_impaired_scen2_l100-v007_r00_r00',
     scen=2,
     layers=100,
@@ -41,11 +47,11 @@ recs.append(dict(
     status='complete',
     terrain='asbuilt',
     flows='impaired'
-))
+)
 
 # ----------------------------
 
-recs.append(dict(
+register(
     run_dir='data_2016long_3d_asbuilt_impaired_scen3_l100-v010_r00',
     scen=3,
     slr=0.0,
@@ -54,13 +60,13 @@ recs.append(dict(
     status='complete',
     terrain='asbuilt',
     flows='impaired'
-))
+)
 
 # -------------------------------
 
 # SLR
 
-recs.append(dict(
+register(
     run_dir='data_2016long_3d_asbuilt_impaired_scen0_slr0.61m_l100-v006_r01',
     scen=0,
     layers=100,
@@ -69,9 +75,9 @@ recs.append(dict(
     flows='impaired',
     terrain='asbuilt',
     slr=0.61
-))
+)
 # tidal version of that
-recs.append(dict(
+register(
     run_dir='data_2016long_3d_asbuilt_impaired_scen0_slr0.61m_l100-v006rtidal2',
     scen=0,
     layers=100,
@@ -80,9 +86,9 @@ recs.append(dict(
     flows='impaired',
     terrain='asbuilt',
     slr=0.61
-))
+)
 # breach version
-recs.append(dict(
+register(
     run_dir='data_2016long_3d_asbuilt_impaired_scen0_slr0.61m_l100-v006_r00rbreach',
     scen=0,
     layers=100,
@@ -91,73 +97,73 @@ recs.append(dict(
     flows='impaired',
     terrain='asbuilt',
     slr=0.61
-))
+)
 
-recs.append(dict(
+register(
     run_dir='data_2016long_3d_asbuilt_impaired_scen1_slr0.61m_l100-v006_r00',
     scen=1, layers=100, status='complete', flows='impaired', slr=0.61,
     terrain='asbuilt',
-    period='2016long'))
+    period='2016long')
 
 # tidal version
-recs.append(dict(
+register(
     run_dir='data_2016long_3d_asbuilt_impaired_scen1_slr0.61m_l100-v006rtidal2',
     scen=1, layers=100, status='running', flows='impaired', slr=0.61,
     terrain='asbuilt',
-    period='2016tidal'))
+    period='2016tidal')
 
 # breach version
-recs.append(dict(
+register(
     run_dir='data_2016long_3d_asbuilt_impaired_scen1_slr0.61m_l100-v006rbreach',
     scen=1, layers=100, status='running', flows='impaired', slr=0.61,
     terrain='asbuilt',
-    period='2016breach'))
+    period='2016breach')
 
-recs.append(dict(
+register(
     run_dir='datacws_2016long_3d_asbuilt_impaired_scen2_slr0.61m_l100-v000',
     scen=2, layers=100, status='running', flows='impaired', slr=0.61,
     terrain='asbuilt',
-    period='2016long'))
+    period='2016long')
 
 # tidal version
-recs.append(dict(
+register(
     run_dir='datacws_2016long_3d_asbuilt_impaired_scen2_slr0.61m_l100-v000rtidal2',
     scen=2, layers=100, status='queued', flows='impaired', slr=0.61,
     terrain='asbuilt',
-    period='2016tidal'))
+    period='2016tidal')
 
 # Breach version
-recs.append(dict(
+register(
     run_dir='datacws_2016long_3d_asbuilt_impaired_scen2_slr0.61m_l100-v000rbreach',
     scen=2, layers=100, status='running', flows='impaired', slr=0.61,
     terrain='asbuilt',
-    period='2016breach'))
+    period='2016breach')
 
-recs.append(dict(
+register(
     run_dir='data_2016long_3d_asbuilt_impaired_scen3_slr0.61m_l100-v003',
     scen=3, layers=100, status='running', flows='impaired', slr=0.61,
     terrain='asbuilt',
-    period='2016long'))
+    period='2016long')
 
 # tidal version
-recs.append(dict(
+register(
     run_dir='data_2016long_3d_asbuilt_impaired_scen3_slr0.61m_l100-v003rtidal2',
     scen=3, layers=100, status='queued', flows='impaired', slr=0.61,
     terrain='asbuilt',
-    period='2016tidal'))
+    period='2016tidal')
 
 # breach version -- this one failed with bus error. running a new copy. this one
 # has maybe 6 days of output already.  Too much work to continue that run.
-recs.append(dict(
+register(
     run_dir='temp-data_2016long_3d_asbuilt_impaired_scen3_slr0.61m_l100-v003rbreach',
     scen=3, layers=100, status='interrupted', flows='impaired', slr=0.61,
     terrain='asbuilt',
-    period='2016breach'))
+    period='2016breach')
 
 # ----------------------
 
 # NM Scenarios, 2D:
-recs.append(dict(
+register(
     run_dir='data_2016_2d_asbuilt_impaired',
     scen=0,
     layers=1,
@@ -165,9 +171,9 @@ recs.append(dict(
     status='completed',
     terrain='asbuilt',
     flows='impaired'
-))
+)
 
-recs.append(dict(
+register(
     run_dir='data_2016_2d_asbuilt_impaired_scen1-v001',
     scen=1,
     period='2016',
@@ -175,9 +181,9 @@ recs.append(dict(
     status='completed',
     terrain='asbuilt',
     flows='impaired'
-))
+)
     
-recs.append(dict(
+register(
     run_dir='data_2016_2d_asbuilt_impaired_scen2-v001',
     scen=2,
     layers=1,
@@ -185,9 +191,9 @@ recs.append(dict(
     status='completed',
     terrain='asbuilt',
     flows='impaired'
-))
+)
 
-recs.append(dict(
+register(
     run_dir='data_2016_2d_asbuilt_impaired_scen3-v001',
     scen=3,
     layers=1,
@@ -195,10 +201,10 @@ recs.append(dict(
     status='completed',
     terrain='asbuilt',
     flows='impaired'
-))
+)
 
 # 2D, tidal runs
-recs.append(dict(
+register(
     run_dir='data_2016_2d_asbuilt_impaired/flowfmrtidal.mdu',
     scen=0,
     layers=1,
@@ -206,10 +212,10 @@ recs.append(dict(
     status='completed',
     terrain='asbuilt',
     flows='impaired'
-))
+)
 
 
-recs.append(dict(
+register(
     run_dir='data_2016_2d_asbuilt_impaired_scen1/flowfmrtidal.mdu',
     scen=1,
     layers=1,
@@ -217,9 +223,9 @@ recs.append(dict(
     status='completed',
     terrain='asbuilt',
     flows='impaired'
-))
+)
 
-recs.append(dict(
+register(
     run_dir='data_2016_2d_asbuilt_impaired_scen2/flowfmrtidal.mdu',
     scen=2,
     layers=1,
@@ -227,9 +233,9 @@ recs.append(dict(
     status='completed',
     terrain='asbuilt',
     flows='impaired'
-))
+)
 
-recs.append(dict(
+register(
     run_dir='data_2016_2d_asbuilt_impaired_scen3/flowfmrtidal.mdu',
     scen=3,
     layers=1,
@@ -237,12 +243,12 @@ recs.append(dict(
     status='completed',
     terrain='asbuilt',
     flows='impaired'
-))
+)
 
 ##
 
 # 3D tidal runs
-recs.append(dict(
+register(
     run_dir='data_2016long_3d_asbuilt_impaired_scen0_l100-v027rtidal2',
     # this one is only 36h
     #run_dir='data_2016long_3d_asbuilt_impaired_scen0_l100-v027rtidal',
@@ -253,10 +259,10 @@ recs.append(dict(
     status='completed',
     terrain='asbuilt',
     flows='impaired'
-))
+)
 
 
-recs.append(dict(
+register(
     run_dir='data_2016long_3d_asbuilt_impaired_scen1_l100-v004rtidal2',
     scen=1,
     layers=100,
@@ -265,9 +271,9 @@ recs.append(dict(
     status='completed',
     terrain='asbuilt',
     flows='impaired'
-))
+)
 
-recs.append(dict(
+register(
     run_dir='data_2016long_3d_asbuilt_impaired_scen2_l100-v007_r00rtidal2',
     scen=2,
     layers=100,
@@ -276,9 +282,9 @@ recs.append(dict(
     terrain='asbuilt',
     status='completed',
     flows='impaired'
-))
+)
 
-recs.append(dict(
+register(
     run_dir='data_2016long_3d_asbuilt_impaired_scen3_l100-v010rtidal2',
     scen=3,
     layers=100,
@@ -287,11 +293,11 @@ recs.append(dict(
     status='completed',
     terrain='asbuilt',
     flows='impaired'
-))
+)
 
 
 # 3D breach runs
-recs.append(dict(
+register(
     run_dir='data_2016long_3d_asbuilt_impaired_scen0_l100-v027rbreach',
     scen=0,
     layers=100,
@@ -300,10 +306,10 @@ recs.append(dict(
     status='completed',
     terrain='asbuilt',
     flows='impaired'
-))
+)
 
 
-recs.append(dict(
+register(
     run_dir='data_2016long_3d_asbuilt_impaired_scen1_l100-v004rbreach',
     scen=1,
     layers=100,
@@ -312,9 +318,9 @@ recs.append(dict(
     status='completed',
     terrain='asbuilt',
     flows='impaired'
-))
+)
 
-recs.append(dict(
+register(
     run_dir='data_2016long_3d_asbuilt_impaired_scen2_l100-v007_r00rbreach',
     scen=2,
     layers=100,
@@ -323,9 +329,9 @@ recs.append(dict(
     status='completed',
     terrain='asbuilt',
     flows='impaired'
-))
+)
 
-recs.append(dict(
+register(
     run_dir='data_2016long_3d_asbuilt_impaired_scen3_l100-v010rbreach',
     scen=3,
     layers=100,
@@ -334,11 +340,11 @@ recs.append(dict(
     status='completed',
     terrain='asbuilt',
     flows='impaired'
-))
+)
 
 # 2013 and unimpaired flow runs
 
-recs.append(dict(
+register(
     run_dir='data_2016long_3d_asbuilt_unimpaired_scen0_l100-v000_r01',
     scen=0,
     layers=100,
@@ -347,9 +353,9 @@ recs.append(dict(
     status='running',
     terrain='asbuilt',
     flows='unimpaired'
-))
+)
 
-recs.append(dict(
+register(
     run_dir='data_2016long_3d_asbuilt_unimpaired_scen0_slr0.61m_l100-v000_r01',
     scen=0,
     layers=100,
@@ -358,9 +364,9 @@ recs.append(dict(
     status='running',
     terrain='asbuilt',
     flows='unimpaired'
-))
+)
 
-recs.append(dict(
+register(
     run_dir='data_2013_3d_asbuilt_impaired_scen0_l100-v000',
     scen=0,
     layers=100,
@@ -369,9 +375,9 @@ recs.append(dict(
     status='complete',
     terrain='asbuilt',
     flows='impaired'
-))
+)
 
-recs.append(dict(
+register(
     run_dir='data_2013_3d_asbuilt_unimpaired_scen0_l100-v000_r01',
     scen=0,
     layers=100,
@@ -380,9 +386,9 @@ recs.append(dict(
     terrain='asbuilt',
     status='resumed',
     flows='unimpaired'
-))
+)
 
-recs.append(dict(
+register(
     run_dir='data_2013_3d_asbuilt_impaired_scen0_slr0.61m_l100-v000_r00',
     scen=0,
     layers=100,
@@ -391,9 +397,9 @@ recs.append(dict(
     terrain='asbuilt',
     status='running',
     flows='impaired'
-))
+)
 
-recs.append(dict(
+register(
     run_dir='data_2013_3d_asbuilt_unimpaired_scen0_slr0.61m_l100-v000_r00',
     scen=0,
     layers=100,
@@ -402,12 +408,12 @@ recs.append(dict(
     terrain='asbuilt',
     status='running',
     flows='unimpaired'
-))
+)
 
 
 #########
 
-recs.append(dict(
+register(
     run_dir='data_2016long_3d_existing_impaired_scen0_l100-v000',
     scen=0,
     layers=100,
@@ -416,8 +422,110 @@ recs.append(dict(
     status='running',
     flows='impaired',
     terrain='existing'
-))
+)
 
+##### Overtopping runs:
+# only worrying about the unimpaired flows ones for now...
+
+register(
+    run_dir="data_2013_3d_asbuilt_unimpaired_scen0_l100-v001",
+    scen=0,
+    layers=100,
+    slr=0.0,
+    period='2013',
+    status='complete',
+    flows='unimpaired',
+    terrain='asbuilt',
+    overtop=True
+)
+
+register(
+    run_dir="data_2013_3d_asbuilt_impaired_scen0_l100-v001",
+    scen=0,
+    layers=100,
+    slr=0.0,
+    period='2013',
+    status='complete',
+    flows='impaired',
+    terrain='asbuilt',
+    overtop=True
+)
+
+# This one appears not to have the overtopping though!
+# verified it's not the same run as the non-overtopping run (that's v000)
+# run_production_bmi looks okay.
+register(
+    run_dir="data_2013_3d_asbuilt_unimpaired_scen0_slr0.61m_l100-v001",
+    scen=0,
+    layers=100,
+    slr=0.61,
+    period='2013',
+    status='running',
+    flows='unimpaired',
+    terrain='asbuilt',
+    overtop=True,
+)
+
+register(
+    run_dir="data_2013_3d_asbuilt_impaired_scen0_slr0.61m_l100-v001",
+    scen=0,
+    layers=100,
+    slr=0.61,
+    period='2013',
+    status='running',
+    flows='impaired',
+    terrain='asbuilt',
+    overtop=True,
+)
+
+register(
+    run_dir="data_2016long_3d_asbuilt_unimpaired_scen0_l100-v001",
+    scen=0,
+    layers=100,
+    slr=0.0,
+    period='2016long',
+    status='complete',
+    flows='unimpaired',
+    terrain='asbuilt',
+    overtop=True,
+)
+
+register(
+    run_dir="data_2016long_3d_asbuilt_impaired_scen0_l100-v028_r00", # there is also a v001 that's running, not sure why.
+    scen=0,
+    layers=100,
+    slr=0.0,
+    period='2016long',
+    status='truncated',
+    flows='impaired',
+    terrain='asbuilt',
+    overtop=True,
+)
+
+register(
+    run_dir="data_2016long_3d_asbuilt_unimpaired_scen0_slr0.61m_l100-v001",
+    scen=0,
+    layers=100,
+    slr=0.61,
+    period='2016long',
+    status='running',
+    flows='unimpaired',
+    terrain='asbuilt',
+    overtop=True,
+)
+
+
+register(
+    run_dir="data_2016long_3d_asbuilt_impaired_scen0_slr0.61m_l100-v007",
+    scen=0,
+    layers=100,
+    slr=0.61,
+    period='2016long',
+    status='running',
+    flows='impaired',
+    terrain='asbuilt',
+    overtop=True,
+)
 
 #####################
 all_runs=pd.DataFrame(recs)
@@ -425,6 +533,9 @@ all_runs=pd.DataFrame(recs)
 
 def select(load_model=False,single=False,**kw):
     sel=None
+    if 'overtop' not in kw:
+        kw['overtop']=False
+        
     for k in kw:
         v=kw[k]
         if isinstance(v,list):
