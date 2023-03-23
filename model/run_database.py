@@ -378,13 +378,20 @@ register(
 )
 
 register(
-    run_dir='data_2013_3d_asbuilt_unimpaired_scen0_l100-v000_r01',
+    # run_dir='data_2013_3d_asbuilt_unimpaired_scen0_l100-v000_r01',
+    # Sort of breaks the overtop logic. this is an overtop=True run, but
+    # register will set overtop=False.
+    # This is the only run where overtopping makes a difference. I can't just
+    # switch everything to overtopping runs, because the SLR overtopping runs
+    # aren't complete. And I'm too lazy to introduce another layer of 'default'
+    # status.
+    run_dir="data_2013_3d_asbuilt_unimpaired_scen0_l100-v001",
     scen=0,
     layers=100,
     slr=0.0,
     period='2013',
     terrain='asbuilt',
-    status='resumed',
+    status='complete',
     flows='unimpaired'
 )
 
